@@ -38,6 +38,7 @@ dependencies{
     compile 'jline:jline:2.13'
     compile 'org.apache.logging.log4j:log4j-core:2.5'
     compile 'com.google.guava:guava-io:r03'
+    compile 'com.google.code.gson:gson:2.6.2'
 }
 jar {
     dependsOn configurations.runtime
@@ -51,3 +52,4 @@ jar {
         exclude "META-INF/*.RSA"
     }
 }
+sourceSets { main { output.resourcesDir = output.classesDir } }

@@ -23,7 +23,7 @@ target/
 gradle.properties
 build/
 
-# QuarxelManager
-testServer/
-
-development.ppk
+# KC-UHC Bot
+logs/
+config.properties
+servers.json
