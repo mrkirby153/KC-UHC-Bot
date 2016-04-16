@@ -213,4 +213,12 @@ public class DiscordHandler extends ListenerAdapter {
         Main.logger.info("Disconnecting from Discord...");
         jda.shutdown();
     }
+
+    /**
+     * Gets the {@link ServerHandler} handler used for this discord handler
+     * @return A {@link ServerHandler}
+     */
+    public ServerHandler getServerHandler() {
+        return servers;
+    }
 }

@@ -27,3 +27,4 @@ build/
 logs/
 config.properties
 servers.json
+mcServers.json

@@ -3,7 +3,9 @@ package me.mrkirby153.uhc.bot;
 
 import jline.console.ConsoleReader;
 import me.mrkirby153.uhc.bot.discord.DiscordHandler;
+import me.mrkirby153.uhc.bot.network.CommandHandler;
 import me.mrkirby153.uhc.bot.network.NetworkHandler;
+import me.mrkirby153.uhc.bot.network.commands.LinkServer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -34,7 +36,7 @@ public class Main {
             return;
         }
         discordHandler = new DiscordHandler(apiKey, new File("."));
-//        discordHandler.init();
+        discordHandler.init();
         Main.logger.info("Initializing network handler");
         networkHandler = new NetworkHandler(6969);
         networkHandler.start();
@@ -78,7 +80,7 @@ public class Main {
     }
 
     private static void registerCommands(){
-        
+        CommandHandler.registerCommand("link", new LinkServer());
     }
 
 

@@ -4,6 +4,7 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import me.mrkirby153.uhc.bot.Main;
+import me.mrkirby153.uhc.bot.discord.ServerHandler;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,13 +22,14 @@ public class CommandHandler {
     }
 
 
-    public static ByteArrayDataOutput execute(String commandName, ByteArrayDataInput data) {
+    public static ByteArrayDataOutput execute(String minecraftServerId, String commandName, ByteArrayDataInput data) {
         Main.logger.info("Executing command "+commandName);
         ByteArrayDataOutput resp = ByteStreams.newDataOutput();
         NetworkCommand networkCommand = commands.get(commandName);
         if (networkCommand == null)
             return resp;
-        networkCommand.process(data, resp);
+        ServerHandler.DiscordServer minecraftServer = Main.discordHandler.getServerHandler().getForMineraftServer(minecraftServerId);
+        networkCommand.process(minecraftServer, data, resp);
         return resp;
     }
 }

@@ -29,6 +29,8 @@ public class ServerHandler {
 
     private List<DiscordServer> servers = new ArrayList<>();
 
+    private List<LinkedMinecraftServer> minecraftServers = new ArrayList<>();
+
     public ServerHandler(JDA jda, File saveLoc) {
         this.saveLoc = saveLoc;
         this.jda = jda;
@@ -39,6 +41,7 @@ public class ServerHandler {
      */
     public void init() {
         load();
+        loadServers();
     }
 
     /**
@@ -160,7 +163,7 @@ public class ServerHandler {
      */
     public void load() {
         try {
-            if(!saveLoc.exists()){
+            if (!saveLoc.exists()) {
                 saveLoc.getParentFile().mkdirs();
                 saveLoc.createNewFile();
                 load();
@@ -168,7 +171,8 @@ public class ServerHandler {
             }
             Gson gson = new Gson();
             String json = new String(Files.readAllBytes(saveLoc.toPath()));
-            servers = gson.fromJson(json, new TypeToken<ArrayList<DiscordServer>>(){}.getType());
+            servers = gson.fromJson(json, new TypeToken<ArrayList<DiscordServer>>() {
+            }.getType());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -206,6 +210,147 @@ public class ServerHandler {
                 return true;
         }
         return false;
+    }
+
+    /**
+     * Links a minecraft server and a discord server.
+     *
+     * @param server The minecraft server's unique id
+     * @param guild  The guild's id
+     * @return True if the server link was successful, false if it wasn't
+     */
+    public boolean linkMcServer(String server, String guild) {
+        if (alreadyLinked(server))
+            return false;
+        if(getById(guild) == null)
+            return false;
+        LinkedMinecraftServer lmcs = new LinkedMinecraftServer(server, guild);
+        minecraftServers.add(lmcs);
+        saveServers();
+        return true;
+    }
+
+    /**
+     * Checks if the minecraft server is already linked
+     *
+     * @param server The server to check
+     * @return True if linked, false if otherwise
+     */
+    public boolean alreadyLinked(String server) {
+        return getLinkedServer(server) != null;
+    }
+
+    /**
+     * Unlinks a minecraft server from it's discord server
+     * @param server The server to unlink
+     */
+    public void unlinkMcServer(String server) {
+        Iterator<LinkedMinecraftServer> ite = minecraftServers.iterator();
+        while (ite.hasNext()) {
+            if (ite.next().getId().equals(server))
+                ite.remove();
+        }
+        saveServers();
+    }
+
+    /**
+     * Gets a {@link LinkedMinecraftServer} map of the guild
+     * @param server The unique minecraft server id
+     * @return The server
+     */
+    public LinkedMinecraftServer getLinkedServer(String server) {
+        if(minecraftServers == null)
+            minecraftServers = new ArrayList<>();
+        for (LinkedMinecraftServer m : minecraftServers) {
+            if (m.getId().equals(server))
+                return m;
+        }
+        return null;
+    }
+
+    /**
+     * Gets the {@link DiscordServer} for the corresponding server id
+     * @param serverId The server id
+     * @return The server
+     */
+    public DiscordServer getForMineraftServer(String serverId){
+        LinkedMinecraftServer linkedServer = getLinkedServer(serverId);
+        if(linkedServer == null)
+            return null;
+        return getById(linkedServer.getId());
+    }
+
+    /**
+     * Saves the linked servers to a file
+     */
+    public void saveServers() {
+        Gson gson = new Gson();
+        String json = gson.toJson(minecraftServers, List.class);
+        try {
+            File servers = new File("mcServers.json");
+            if (!servers.exists()) {
+                servers.createNewFile();
+            }
+            FileOutputStream fos = new FileOutputStream(servers);
+            fos.write(json.getBytes());
+            fos.flush();
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Loads the discord servers from a file
+     */
+    public void loadServers() {
+        try {
+            File mcServers = new File("mcServers.json");
+            if(!mcServers.exists())
+                mcServers.createNewFile();
+                Gson gson = new Gson();
+            String json = new String(Files.readAllBytes(mcServers.toPath()));
+            minecraftServers = gson.fromJson(json, new TypeToken<ArrayList<LinkedMinecraftServer>>() {
+            }.getType());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Class to map discord servers to minecraft servers
+     */
+    public static class LinkedMinecraftServer {
+
+        private String id;
+        private String guild;
+
+        public LinkedMinecraftServer(String serverId, String guild) {
+            this.guild = guild;
+            this.id = serverId;
+        }
+
+        public LinkedMinecraftServer(String serverId, DiscordServer server) {
+            this(serverId, server.getId());
+        }
+
+        /**
+         * Gets the minecraft server's id
+         *
+         * @return The id of the minecraft server
+         */
+        public String getId() {
+            return id;
+        }
+
+        /**
+         * Gets the guild/discord server the server is linked to
+         *
+         * @return The guild linked to
+         */
+        public String getGuild() {
+            return guild;
+        }
     }
 
     /**
@@ -266,7 +411,7 @@ public class ServerHandler {
             if (g == null)
                 throw new IllegalStateException("No longer part of the guild " + this.getName());
             Channel existChannel = getExistingChannel(name, false);
-            if(this.channels == null)
+            if (this.channels == null)
                 this.channels = new ArrayList<>();
             if (existChannel != null) {
                 this.channels.add(new DiscordChannel(existChannel));

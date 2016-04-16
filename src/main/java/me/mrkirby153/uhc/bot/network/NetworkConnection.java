@@ -75,8 +75,9 @@ public class NetworkConnection extends Thread {
                         continue;
                     }
                     ByteArrayDataInput in = ByteStreams.newDataInput(rawDecrypted);
+                    String serverId = in.readUTF();
                     String command = in.readUTF();
-                    ByteArrayDataOutput out = CommandHandler.execute(command, in);
+                    ByteArrayDataOutput out = CommandHandler.execute(serverId, command, in);
                     sendMessage(NetworkHandler.Cryptography.encrypt(theirPubKey,out.toByteArray()));
                 }
             }
