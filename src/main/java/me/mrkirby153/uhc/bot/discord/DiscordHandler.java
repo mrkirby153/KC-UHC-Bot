@@ -208,7 +208,7 @@ public class DiscordHandler extends ListenerAdapter {
 
     public void shutdown() {
         for (ServerHandler.DiscordServer s : servers.connectedServers()) {
-            s.destroyAllChannels();
+            s.destroy();
         }
         Main.logger.info("Disconnecting from Discord...");
         jda.shutdown();

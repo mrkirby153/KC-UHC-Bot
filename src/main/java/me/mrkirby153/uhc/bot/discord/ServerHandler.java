@@ -4,11 +4,10 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import me.mrkirby153.uhc.bot.Main;
 import net.dv8tion.jda.JDA;
-import net.dv8tion.jda.entities.Channel;
-import net.dv8tion.jda.entities.Guild;
-import net.dv8tion.jda.entities.TextChannel;
-import net.dv8tion.jda.entities.VoiceChannel;
+import net.dv8tion.jda.entities.*;
 import net.dv8tion.jda.managers.ChannelManager;
+import net.dv8tion.jda.managers.GuildManager;
+import net.dv8tion.jda.managers.RoleManager;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -222,7 +221,7 @@ public class ServerHandler {
     public boolean linkMcServer(String server, String guild) {
         if (alreadyLinked(server))
             return false;
-        if(getById(guild) == null)
+        if (getById(guild) == null)
             return false;
         LinkedMinecraftServer lmcs = new LinkedMinecraftServer(server, guild);
         minecraftServers.add(lmcs);
@@ -242,6 +241,7 @@ public class ServerHandler {
 
     /**
      * Unlinks a minecraft server from it's discord server
+     *
      * @param server The server to unlink
      */
     public void unlinkMcServer(String server) {
@@ -255,11 +255,12 @@ public class ServerHandler {
 
     /**
      * Gets a {@link LinkedMinecraftServer} map of the guild
+     *
      * @param server The unique minecraft server id
      * @return The server
      */
     public LinkedMinecraftServer getLinkedServer(String server) {
-        if(minecraftServers == null)
+        if (minecraftServers == null)
             minecraftServers = new ArrayList<>();
         for (LinkedMinecraftServer m : minecraftServers) {
             if (m.getId().equals(server))
@@ -270,14 +271,15 @@ public class ServerHandler {
 
     /**
      * Gets the {@link DiscordServer} for the corresponding server id
+     *
      * @param serverId The server id
      * @return The server
      */
-    public DiscordServer getForMineraftServer(String serverId){
+    public DiscordServer getForMineraftServer(String serverId) {
         LinkedMinecraftServer linkedServer = getLinkedServer(serverId);
-        if(linkedServer == null)
+        if (linkedServer == null)
             return null;
-        return getById(linkedServer.getId());
+        return getById(linkedServer.getGuild());
     }
 
     /**
@@ -306,9 +308,9 @@ public class ServerHandler {
     public void loadServers() {
         try {
             File mcServers = new File("mcServers.json");
-            if(!mcServers.exists())
+            if (!mcServers.exists())
                 mcServers.createNewFile();
-                Gson gson = new Gson();
+            Gson gson = new Gson();
             String json = new String(Files.readAllBytes(mcServers.toPath()));
             minecraftServers = gson.fromJson(json, new TypeToken<ArrayList<LinkedMinecraftServer>>() {
             }.getType());
@@ -363,6 +365,7 @@ public class ServerHandler {
         private final String id;
 
         private transient List<DiscordChannel> channels = new ArrayList<>();
+        private transient List<DiscordRank> ranks = new ArrayList<>();
         private Object guild;
 
         public DiscordServer(String name, String id) {
@@ -445,13 +448,15 @@ public class ServerHandler {
         }
 
         /**
-         * Destroys all channels tracked by this server
+         * Destroys all channels and roles tracked by this server
          */
-        public void destroyAllChannels() {
+        public void destroy() {
             Main.logger.info("Removing channels in " + getName());
-            for (DiscordChannel c : channels) {
-                c.destroy();
-            }
+            if (channels.size() > 0)
+                channels.forEach(DiscordChannel::destroy);
+            Main.logger.info("Removing ranks on " + getName());
+            if (ranks.size() > 0)
+                ranks.forEach(DiscordRank::delete);
         }
 
         /**
@@ -478,6 +483,48 @@ public class ServerHandler {
 
         public Guild getGuild() {
             return jda.getGuildById(this.id);
+        }
+
+        /**
+         * Creates a rank on the server
+         *
+         * @param name The name of the rank to create
+         * @return The rank
+         */
+        public DiscordRank createRank(String name) {
+            Main.logger.info("Creating rank " + name);
+            DiscordRank rank = new DiscordRank(this, name);
+            rank.create();
+            return rank;
+        }
+
+        /**
+         * Gets the rank by its name
+         *
+         * @param name The name of rank
+         * @return The rank or null, if it doesn't exist
+         */
+        public DiscordRank getRankByName(String name) {
+            if(ranks == null)
+                ranks = new ArrayList<>();
+            for (DiscordRank r : ranks) {
+                if (r.rankName.equals(name))
+                    return r;
+            }
+            return null;
+        }
+
+        /**
+         * Assigns the rank to the given user
+         *
+         * @param user     The user
+         * @param rankName The rank
+         */
+        public void assignRank(User user, String rankName) {
+            DiscordRank rankByName = getRankByName(rankName);
+            if (rankByName == null)
+                rankByName = createRank(rankName);
+            rankByName.assign(user);
         }
     }
 
@@ -573,6 +620,63 @@ public class ServerHandler {
          */
         public void destroy() {
             this.channel.getManager().delete();
+        }
+    }
+
+    public static class DiscordRank {
+        private String rankName;
+        private RoleManager role;
+        private DiscordServer server;
+
+        public DiscordRank(DiscordServer onServer, String rankName) {
+            this.rankName = rankName;
+            this.server = onServer;
+        }
+
+        /**
+         * Creates the role on the server
+         */
+        public void create() {
+            role = server.getGuild().createRole();
+            role.setName(rankName);
+            role.update();
+        }
+
+        /**
+         * Deletes the role
+         */
+        public void delete() {
+            role.delete();
+        }
+
+        /**
+         * Adds the role to the given user
+         *
+         * @param user The user to give the role to
+         */
+        public void assign(User user) {
+            server.getGuild().getManager().addRoleToUser(user, role.getRole());
+            server.getGuild().getManager().update();
+        }
+
+        /**
+         * Removes the role from the player
+         *
+         * @param user The user to remove the role to
+         */
+        public void unassign(User user) {
+            GuildManager manager = server.getGuild().getManager();
+            manager.removeRoleFromUser(user, role.getRole());
+            manager.update();
+        }
+
+        /**
+         * Gets the {@link Role} corresponding to the rank
+         *
+         * @return The role
+         */
+        public Role getRole() {
+            return role.getRole();
         }
     }
 }

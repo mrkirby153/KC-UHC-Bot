@@ -5,6 +5,7 @@ import jline.console.ConsoleReader;
 import me.mrkirby153.uhc.bot.discord.DiscordHandler;
 import me.mrkirby153.uhc.bot.network.CommandHandler;
 import me.mrkirby153.uhc.bot.network.NetworkHandler;
+import me.mrkirby153.uhc.bot.network.commands.CreateTeam;
 import me.mrkirby153.uhc.bot.network.commands.LinkServer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -81,6 +82,7 @@ public class Main {
 
     private static void registerCommands(){
         CommandHandler.registerCommand("link", new LinkServer());
+        CommandHandler.registerCommand("newTeam", new CreateTeam());
     }
 
 
