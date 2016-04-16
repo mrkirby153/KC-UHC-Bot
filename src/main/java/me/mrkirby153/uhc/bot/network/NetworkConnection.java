@@ -33,6 +33,7 @@ public class NetworkConnection extends Thread {
         setDaemon(true);
         ourKey = NetworkHandler.Cryptography.generateKeypair(2048);
         state = State.HANDSHAKING;
+        setName("NetworkConnection");
     }
 
     @Override
