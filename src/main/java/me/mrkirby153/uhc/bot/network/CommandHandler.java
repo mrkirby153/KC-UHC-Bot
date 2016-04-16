@@ -1,0 +1,33 @@
+package me.mrkirby153.uhc.bot.network;
+
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
+import me.mrkirby153.uhc.bot.Main;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class CommandHandler {
+
+
+    private static Map<String, NetworkCommand> commands = new HashMap<>();
+
+    public static void registerCommand(String name, NetworkCommand command) {
+        if (commands.containsKey(name.toLowerCase()))
+            throw new IllegalArgumentException("Cannot register a command with the same name twice!");
+        Main.logger.info("Registering command " + name + " (" + command.getClass().getCanonicalName() + ")");
+        commands.put(name, command);
+    }
+
+
+    public static ByteArrayDataOutput execute(String commandName, ByteArrayDataInput data) {
+        Main.logger.info("Executing command "+commandName);
+        ByteArrayDataOutput resp = ByteStreams.newDataOutput();
+        NetworkCommand networkCommand = commands.get(commandName);
+        if (networkCommand == null)
+            return resp;
+        networkCommand.process(data, resp);
+        return resp;
+    }
+}

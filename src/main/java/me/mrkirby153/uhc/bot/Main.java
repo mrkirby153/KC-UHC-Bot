@@ -3,6 +3,7 @@ package me.mrkirby153.uhc.bot;
 
 import jline.console.ConsoleReader;
 import me.mrkirby153.uhc.bot.discord.DiscordHandler;
+import me.mrkirby153.uhc.bot.network.NetworkHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -19,6 +20,7 @@ public class Main {
     public static boolean isRunning = true;
     public static DiscordHandler discordHandler;
     private static Properties config = new Properties();
+    private static NetworkHandler networkHandler;
 
     public static void main(String[] args) throws Exception{
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
@@ -32,7 +34,12 @@ public class Main {
             return;
         }
         discordHandler = new DiscordHandler(apiKey, new File("."));
-        discordHandler.init();
+//        discordHandler.init();
+        Main.logger.info("Initializing network handler");
+        networkHandler = new NetworkHandler(6969);
+        networkHandler.start();
+        Main.logger.info("Registering network commands");
+        registerCommands();
         Main.logger.info("Initializing console...");
         ConsoleReader consoleReader = new ConsoleReader();
         consoleReader.setBellEnabled(false);
@@ -70,6 +77,10 @@ public class Main {
         }
     }
 
+    private static void registerCommands(){
+        
+    }
+
 
     public static class ShutdownHook extends Thread{
 
@@ -80,6 +91,7 @@ public class Main {
         public void run() {
             if(Main.discordHandler != null)
                 Main.discordHandler.shutdown();
+            Main.networkHandler.shutdown();
             Main.logger.info("Goodbye");
         }
     }

@@ -115,7 +115,7 @@ public class DiscordHandler extends ListenerAdapter {
         String message = m.getRawContent().toLowerCase();
         if (message.startsWith("!discord")) {
             m.deleteMessage();
-            // hardcode link command now
+            // hardcode link commands now
             String[] parts = message.split(" ");
             if (parts.length == 0)
                 return;
