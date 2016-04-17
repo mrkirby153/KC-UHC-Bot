@@ -28,8 +28,10 @@ public class AssignTeams implements NetworkCommand {
             // Move to team channel
             if (connectedToVice(server, u)) {
                 VoiceChannel voiceChannel = server.getVoiceChannel("Team " + team);
-                if (voiceChannel != null)
+                if (voiceChannel != null) {
+                    Main.logger.info("Moving " + u.getUsername() + " to " + voiceChannel.getName());
                     server.getGuild().getManager().moveVoiceUser(u, voiceChannel);
+                }
             }
         }
     }
