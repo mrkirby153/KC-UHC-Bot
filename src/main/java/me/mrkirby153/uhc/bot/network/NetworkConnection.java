@@ -71,7 +71,6 @@ public class NetworkConnection extends Thread {
                     ByteBuffer msgBuff = ByteBuffer.wrap(encodedMessage);
                     msgBuff.rewind();
                     byte[] rawDecrypted = NetworkHandler.Cryptography.decrypt(ourKey.getPrivate(), encodedMessage);
-                    System.out.println("Message size: "+encodedMessage.length);
                     if (rawDecrypted == null) {
                         Main.logger.warn("Decryption failed!");
                         continue;

@@ -23,6 +23,7 @@ public class CommandHandler {
 
 
     public static ByteArrayDataOutput execute(String minecraftServerId, String commandName, ByteArrayDataInput data) {
+        Main.logger.info("Processing command " + commandName);
         ByteArrayDataOutput resp = ByteStreams.newDataOutput();
         resp.writeUTF(commandName);
         NetworkCommand networkCommand = commands.get(commandName);
