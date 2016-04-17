@@ -177,6 +177,8 @@ public class ServerHandler {
             e.printStackTrace();
         }
         // Remove servers that no longer exist
+        if(servers == null)
+            servers = new ArrayList<>();
         Iterator<DiscordServer> serverIterator = servers.iterator();
         while (serverIterator.hasNext()) {
             if (jda.getGuildById(serverIterator.next().getId()) == null)
