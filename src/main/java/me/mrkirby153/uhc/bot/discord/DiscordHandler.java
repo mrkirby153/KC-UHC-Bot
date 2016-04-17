@@ -121,6 +121,13 @@ public class DiscordHandler extends ListenerAdapter {
             String[] parts = message.split(" ");
             if (parts.length == 0)
                 return;
+            if(parts[1].equalsIgnoreCase("linked")){
+                if(uuidToDiscordCache.containsvalue(event.getAuthor())){
+                    event.getChannel().sendMessage(event.getAuthor().getAsMention()+", you have linked your discord account!");
+                } else {
+                    event.getChannel().sendMessage(event.getAuthor().getAsMention()+", you **haven't** linked your discord account!");
+                }
+            }
             if (parts[1].equalsIgnoreCase("relink")) {
                 linkGuild(event.getGuild());
             }
