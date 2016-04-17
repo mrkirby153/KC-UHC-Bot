@@ -22,10 +22,12 @@ public class AssignTeams implements NetworkCommand {
             UUID playerUUID = UUID.fromString(input.readUTF());
             String team = input.readUTF();
             User u = Main.discordHandler.getUser(playerUUID);
+            if (u == null)
+                continue;
             server.assignRank(u, team);
             // Move to team channel
             if (connectedToVice(server, u)) {
-                VoiceChannel voiceChannel = server.getVoiceChannel(team);
+                VoiceChannel voiceChannel = server.getVoiceChannel("Team " + team);
                 if (voiceChannel != null)
                     server.getGuild().getManager().moveVoiceUser(u, voiceChannel);
             }
@@ -34,8 +36,11 @@ public class AssignTeams implements NetworkCommand {
 
     public static boolean connectedToVice(ServerHandler.DiscordServer server, User user) {
         for (VoiceChannel c : server.getGuild().getVoiceChannels()) {
-            if (c.getUsers().contains(user))
-                return true;
+            if (c.getUsers() != null)
+                for (User u : c.getUsers()) {
+                    if (u.getId().equalsIgnoreCase(user.getId()))
+                        return true;
+                }
         }
         return false;
     }

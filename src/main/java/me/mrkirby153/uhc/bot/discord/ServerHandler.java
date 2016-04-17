@@ -497,6 +497,7 @@ public class ServerHandler {
             Main.logger.info("Creating rank " + name);
             DiscordRank rank = new DiscordRank(this, name);
             rank.create();
+            ranks.add(rank);
             return rank;
         }
 
@@ -582,12 +583,10 @@ public class ServerHandler {
         }
 
         public void bringAllToLobby() {
-            VoiceChannel vc = createVoiceChannel("lobby");
+            VoiceChannel vc = createVoiceChannel("Lobby");
             getGuild().getUsers().stream().filter(user -> AssignTeams.connectedToVice(this, user)).forEach(user -> getGuild().getManager().moveVoiceUser(user, vc));
             // Remove all roles from the user
-            for(User u : getGuild().getUsers()){
-                getGuild().getRolesForUser(u).forEach(r -> getGuild().getManager().removeRoleFromUser(u, r));
-            }
+            getGuild().getUsers().stream().filter(u -> !u.isBot()).forEach(u -> getGuild().getRolesForUser(u).forEach(r -> getGuild().getManager().removeRoleFromUser(u, r)));
         }
     }
 
@@ -718,6 +717,8 @@ public class ServerHandler {
          * @param user The user to give the role to
          */
         public void assign(User user) {
+            if(user == null)
+                return;
             server.getGuild().getManager().addRoleToUser(user, role.getRole());
             server.getGuild().getManager().update();
         }
@@ -743,3 +744,4 @@ public class ServerHandler {
         }
     }
 }
+

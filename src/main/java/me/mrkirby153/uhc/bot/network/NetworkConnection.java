@@ -91,6 +91,8 @@ public class NetworkConnection extends Thread {
             }
         } catch (Exception e) {
             e.printStackTrace();
+            sendMessage(NetworkHandler.Cryptography.encrypt(theirPubKey, new byte[0]));
+            run();
         }
     }
 
