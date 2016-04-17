@@ -135,6 +135,8 @@ public class DiscordHandler extends ListenerAdapter {
             }
             if (parts[1].equalsIgnoreCase("part")) {
                 Main.logger.info("Leaving server " + event.getGuild().getName());
+                if(ds != null)
+                    ds.destroy();
                 servers.removeConnectedServer(event.getGuild().getId());
                 event.getGuild().getPublicChannel().sendMessage("Goodbye.");
                 event.getGuild().getManager().leave();
