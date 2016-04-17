@@ -3,6 +3,7 @@ package me.mrkirby153.uhc.bot.discord;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import me.mrkirby153.uhc.bot.Main;
+import me.mrkirby153.uhc.bot.network.commands.AssignTeams;
 import net.dv8tion.jda.JDA;
 import net.dv8tion.jda.entities.*;
 import net.dv8tion.jda.managers.ChannelManager;
@@ -455,8 +456,9 @@ public class ServerHandler {
             if (channels.size() > 0)
                 channels.forEach(DiscordChannel::destroy);
             Main.logger.info("Removing ranks on " + getName());
-            if (ranks.size() > 0)
-                ranks.forEach(DiscordRank::delete);
+            if (ranks == null)
+                ranks = new ArrayList<>();
+            ranks.forEach(DiscordRank::delete);
         }
 
         /**
@@ -505,7 +507,7 @@ public class ServerHandler {
          * @return The rank or null, if it doesn't exist
          */
         public DiscordRank getRankByName(String name) {
-            if(ranks == null)
+            if (ranks == null)
                 ranks = new ArrayList<>();
             for (DiscordRank r : ranks) {
                 if (r.rankName.equals(name))
@@ -525,6 +527,67 @@ public class ServerHandler {
             if (rankByName == null)
                 rankByName = createRank(rankName);
             rankByName.assign(user);
+        }
+
+        /**
+         * Destroys the channel with the given name
+         *
+         * @param name The name
+         */
+        public void deleteChannel(String name) {
+            Iterator<DiscordChannel> it = channels.iterator();
+            while (it.hasNext()) {
+                DiscordChannel next = it.next();
+                if (next.getName().equalsIgnoreCase(name)) {
+                    next.destroy();
+                    it.remove();
+                }
+            }
+        }
+
+        /**
+         * Gets the {@link VoiceChannel} by its name
+         *
+         * @param channel The channel name
+         * @return The {@link VoiceChannel} or null
+         */
+        public VoiceChannel getVoiceChannel(String channel) {
+            for (DiscordChannel c : channels) {
+                if (c.getName().equals(channel)) {
+                    if (c.channel instanceof VoiceChannel)
+                        return (VoiceChannel) c.channel;
+                    else
+                        return null;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Gets the {@link TextChannel} by its name
+         *
+         * @param channel The channel name
+         * @return The {@link TextChannel} or null
+         */
+        public MessageChannel getTextChannel(String channel) {
+            for (DiscordChannel c : channels) {
+                if (c.getName().equals(channel)) {
+                    if (c.channel instanceof TextChannel)
+                        return (TextChannel) c.channel;
+                    else
+                        return null;
+                }
+            }
+            return null;
+        }
+
+        public void bringAllToLobby() {
+            VoiceChannel vc = createVoiceChannel("lobby");
+            getGuild().getUsers().stream().filter(user -> AssignTeams.connectedToVice(this, user)).forEach(user -> getGuild().getManager().moveVoiceUser(user, vc));
+            // Remove all roles from the user
+            for(User u : getGuild().getUsers()){
+                getGuild().getRolesForUser(u).forEach(r -> getGuild().getManager().removeRoleFromUser(u, r));
+            }
         }
     }
 

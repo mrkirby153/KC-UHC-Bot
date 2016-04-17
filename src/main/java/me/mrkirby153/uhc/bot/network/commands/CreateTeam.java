@@ -21,7 +21,7 @@ public class CreateTeam implements NetworkCommand {
         String team = input.readUTF();
         Main.logger.info("Creating rank " + team);
         TextChannel c = server.createTextChannel("team-" + team);
-        VoiceChannel v = server.createVoiceChannel(team);
+        VoiceChannel v = server.createVoiceChannel("Team " + team);
 
         ServerHandler.DiscordRank rank = server.getRankByName(team);
         if (rank == null)

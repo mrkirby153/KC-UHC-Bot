@@ -68,13 +68,13 @@ public class DiscordHandler extends ListenerAdapter {
             TextChannel tc = s.createTextChannel("uhc-link");
             tc.getManager().setTopic("[KC-UHC] Please log into the server and follow the instructions!");
             tc.getManager().update();
-        } catch (PermissionException e){
+        } catch (PermissionException e) {
             // Delay execution
-            if(triedBefore){
+            if (triedBefore) {
                 servers.getById(s.getId()).getGuild().getPublicChannel().sendMessage("**ERROR:** __Could not create the required channels because I do not have permission!__");
                 return;
             }
-            Thread t = new Thread(){
+            Thread t = new Thread() {
                 @Override
                 public void run() {
                     try {
@@ -93,9 +93,10 @@ public class DiscordHandler extends ListenerAdapter {
 
     /**
      * Creates channels on the given server
+     *
      * @param s The server
      */
-    public void initChannels(ServerHandler.DiscordServer s){
+    public void initChannels(ServerHandler.DiscordServer s) {
         initChannels(s, false);
     }
 
@@ -112,8 +113,9 @@ public class DiscordHandler extends ListenerAdapter {
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
         Message m = event.getMessage();
-        String message = m.getRawContent().toLowerCase();
-        if (message.startsWith("!discord")) {
+        String message = m.getRawContent();
+        ServerHandler.DiscordServer ds = getServerHandler().getById(event.getGuild().getId());
+        if (message.startsWith("!uhcbot")) {
             m.deleteMessage();
             // hardcode link commands now
             String[] parts = message.split(" ");
@@ -122,8 +124,17 @@ public class DiscordHandler extends ListenerAdapter {
             if (parts[1].equalsIgnoreCase("relink")) {
                 linkGuild(event.getGuild());
             }
-            if(parts[1].equalsIgnoreCase("part")){
-                Main.logger.info("Leaving server "+event.getGuild().getName());
+            if (parts[1].equalsIgnoreCase("id")) {
+                event.getGuild().getPublicChannel().sendMessage("The server id is `" + event.getGuild().getId() + "`");
+            }
+            if (parts[1].equalsIgnoreCase("link")) {
+                if (event.getChannel() != ds.getTextChannel("uhc-link"))
+                    return;
+                String code = parts[2];
+                link(code, event.getAuthor(), (Channel) event.getChannel());
+            }
+            if (parts[1].equalsIgnoreCase("part")) {
+                Main.logger.info("Leaving server " + event.getGuild().getName());
                 servers.removeConnectedServer(event.getGuild().getId());
                 event.getGuild().getPublicChannel().sendMessage("Goodbye.");
                 event.getGuild().getManager().leave();
@@ -164,8 +175,10 @@ public class DiscordHandler extends ListenerAdapter {
      * @return True if the link was successful, fase if it wasn't
      */
     public boolean link(String code, User user, Channel inChannel) {
-        if (!linkExists(code))
+        if (!linkExists(code)) {
+            ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", that code was invalid!");
             return false;
+        }
         UUID u = codeToPlayerMap.remove(code);
         String name = uuidToNameMap.get(u);
         long expiresOn = System.currentTimeMillis() + uuidToDiscordCache.getExpireTime();
@@ -177,6 +190,16 @@ public class DiscordHandler extends ListenerAdapter {
             ((MessageChannel) inChannel).sendMessage("This link will expire on " + sdf.format(expiresOn));
         }
         return true;
+    }
+
+    /**
+     * Gets the Discord {@link User} whose account is linked to the given UUID
+     *
+     * @param u The uuid
+     * @return The user
+     */
+    public User getUser(UUID u) {
+        return uuidToDiscordCache.get(u);
     }
 
     /**
@@ -201,7 +224,7 @@ public class DiscordHandler extends ListenerAdapter {
      */
     private void linkGuild(Guild guild) {
         Main.logger.info("Linked server " + guild.getName() + "!");
-        guild.getPublicChannel().sendMessage("ID retrieval successful! For reference, this guild's id is `"+guild.getId()+"`");
+        guild.getPublicChannel().sendMessage("ID retrieval successful! For reference, this guild's id is `" + guild.getId() + "`");
         servers.addConnectedServer(guild);
         initChannels(servers.getById(guild.getId()));
     }
@@ -216,6 +239,7 @@ public class DiscordHandler extends ListenerAdapter {
 
     /**
      * Gets the {@link ServerHandler} handler used for this discord handler
+     *
      * @return A {@link ServerHandler}
      */
     public ServerHandler getServerHandler() {

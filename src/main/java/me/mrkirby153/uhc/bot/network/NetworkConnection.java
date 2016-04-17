@@ -60,7 +60,7 @@ public class NetworkConnection extends Thread {
                 }
                 if (state == State.RUNNING) {
                     if (inputStream == null)
-                    continue;
+                        continue;
                     byte[] messageSizeBytes = new byte[4];
                     if (inputStream.read(messageSizeBytes) <= 0) continue;
                     ByteBuffer msgLenBuff = ByteBuffer.wrap(messageSizeBytes);
@@ -71,6 +71,7 @@ public class NetworkConnection extends Thread {
                     ByteBuffer msgBuff = ByteBuffer.wrap(encodedMessage);
                     msgBuff.rewind();
                     byte[] rawDecrypted = NetworkHandler.Cryptography.decrypt(ourKey.getPrivate(), encodedMessage);
+                    System.out.println("Message size: "+encodedMessage.length);
                     if (rawDecrypted == null) {
                         Main.logger.warn("Decryption failed!");
                         continue;
