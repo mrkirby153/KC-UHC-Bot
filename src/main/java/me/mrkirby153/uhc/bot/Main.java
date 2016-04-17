@@ -24,13 +24,13 @@ public class Main {
     private static Properties config = new Properties();
     private static NetworkHandler networkHandler;
 
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception {
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
         Main.logger.info("Initializing discord bot");
         loadConfiguration();
 
         String apiKey = config.getProperty("botKey");
-        if(apiKey == null || apiKey.isEmpty()){
+        if (apiKey == null || apiKey.isEmpty()) {
             Main.logger.warn("No API key set! Shutting down");
             System.exit(0);
             return;
@@ -47,8 +47,8 @@ public class Main {
         consoleReader.setBellEnabled(false);
 
         String line;
-        while(isRunning && (line = consoleReader.readLine()) != null){
-            if(line.equalsIgnoreCase("shutdown")){
+        while (isRunning && (line = consoleReader.readLine()) != null) {
+            if (line.equalsIgnoreCase("shutdown")) {
                 System.exit(0);
                 return;
             }
@@ -56,8 +56,8 @@ public class Main {
     }
 
 
-    private static void loadConfiguration(){
-        if(!new File("config.properties").exists()){
+    private static void loadConfiguration() {
+        if (!new File("config.properties").exists()) {
             try {
                 config.put("botKey", "");
                 config.store(new FileOutputStream("config.properties"), "KC UHC Bot");
@@ -70,7 +70,7 @@ public class Main {
         }
         try {
             FileInputStream fos = new FileInputStream("config.properties");
-            if(config == null)
+            if (config == null)
                 config = new Properties();
             config.load(fos);
             logger.info("Loaded configuraiton successfully!");
@@ -79,7 +79,7 @@ public class Main {
         }
     }
 
-    private static void registerCommands(){
+    private static void registerCommands() {
         CommandHandler.registerCommand("link", new LinkServer());
         CommandHandler.registerCommand("newTeam", new CreateTeam());
         CommandHandler.registerCommand("removeTeam", new RemoveTeam());
@@ -90,16 +90,18 @@ public class Main {
     }
 
 
-    public static class ShutdownHook extends Thread{
+    public static class ShutdownHook extends Thread {
 
-        public ShutdownHook(){
+        public ShutdownHook() {
             setName("KC-UHC Shutdown");
         }
+
         @Override
         public void run() {
-            if(Main.discordHandler != null)
+            if (Main.discordHandler != null)
                 Main.discordHandler.shutdown();
-            Main.networkHandler.shutdown();
+            if (networkHandler != null)
+                Main.networkHandler.shutdown();
             Main.logger.info("Goodbye");
         }
     }
