@@ -53,6 +53,24 @@ public class Cache<K, V> {
     }
 
     /**
+     * Checks if the given key is in the cache
+     * @param key The key to check
+     * @return True if the key is in the map, false if it isn't
+     */
+    public boolean containsKey(K key){
+        return cache.containsKey(key);
+    }
+
+    /**
+     * Checks if the given value is in the cache
+     * @param value The value to check
+     * @return True if the value is in the map, false if it isn't
+     */
+    public boolean containsvalue(V value){
+        return cache.values().stream().filter(val -> val.getValue().equals(value)).count() > 0;
+    }
+
+    /**
      * Gets the raw cache
      *
      * @return The cache
