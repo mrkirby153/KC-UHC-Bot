@@ -1,0 +1,168 @@
+#######################
+# KC-UHC Bot Protocol #
+#######################
+
+Version: 1.0
+Last revision: 4-18-2016
+
+COMMAND OVERVIEW
+================
++ link
++ newTeam
++ removeTeam
++ assignTeams
++ assignRole
++ linkCode
++ toLobby
+
+HANDSHAKE
+=========
+Communication between the robot and the server is encrypted using the RSA algorithm with 2048 bit keys.
+
+Once a connection is made, the server will wait indefinitely for 2048 bytes representing the client's public key, encoded
+using the X.509 standard.
+
+After receiving the client's key, the server will respond with its 2048 byte public key encoded using the X.509 standard.
+
+Once the handshake is complete, the server will enter listening mode.
+
+MESSAGE FORMAT
+==============
+After a Handshake, the server will listen until the socket is closed for the following:
+
+1. The message size - A 4 byte little endian ordered integer
+2. The encrypted message - MUST be the same length as the message size sent just before
+
+MESSAGE CONTENTS
+================
+Each encrypted message MUST contain the following data:
+1. A UTF-8 String representing a unique id to identify the Minecraft server to handle the message for
+2. A UTF-8 String representing the command to execute (See COMMAND OVERVIEW or COMMANDS)
+3. Bytes as specified in the COMMANDS section for the command
+
+MESSAGE RESPONSE
+================
+For each message sent, the server will respond with a byte array containing the response. If there was an error processing
+the message, it will respond with a byte array with size zero.
+
+The response is handled by the command, so see the command's details in the COMMANDS section for further information
+
+COMMANDS
+========
+Format: The header will contain the command's user friendly name as well as the command's internal name (used by the bot).
+The internal name is in parenthesis.
+
+|=======================================|
+| Link (link)                           |
+|                                       |
+| Links a minecraft server with the     |
+| discord server.                       |
+|=======================================|
+| String    | The server's id           |
+|---------------------------------------|
+| String    | The discord guild id. The |
+|           | robot should output the   |
+|           | guild to #general when it |
+|           | joins                     |
+|=======================================|
+| Response                              |
+|=======================================|
+| Boolean   | True or false depending if|
+|           | the link was successful   |
+|=======================================|
+
+
+
+|=======================================|
+| New Team (newTeam)                    |
+|                                       |
+| Creates a new UHC team (channel, text |
+| channel, voice channel)               |
+|=======================================|
+| String    | The team name             |
+|=======================================|
+| Response                              |
+|=======================================|
+| Integer   | 0                         |
+|=======================================|
+
+
+
+|=======================================|
+| Delete Team (removeTeam)              |
+|                                       |
+| Removes a new UHC team (channel, text |
+| channel, voice channel)               |
+|=======================================|
+| String    | The team name             |
+|=======================================|
+| Response                              |
+|=======================================|
+| Integer   | 0                         |
+|=======================================|
+
+
+
+
+|=======================================|
+| Assign Team (assignTeam)              |
+|                                       |
+| Assigns the provided UUIDs to the team|
+|=======================================|
+| Integer   | The count of players in   |
+|           |  the message              |
+| --- [ Repeat for the number above]--- |
+|---------------------------------------|
+| String    | The UUID (with dashes)    |
+|---------------------------------------|
+| String    | The team name             |
+| --- [ End Repeat                  ]---|
+|=======================================|
+| Response                              |
+|=======================================|
+| None                                  |
+|=======================================|
+
+
+
+|=======================================|
+| Assign Role (assignRole)              |
+|                                       |
+| Assigns the role to the given UUID    |
+|=======================================|
+| String    | The UUID (with dashes)    |
+|---------------------------------------|
+| String    | The role to assign        |
+|=======================================|
+| Response                              |
+|=======================================|
+| None                                  |
+|=======================================|
+
+
+
+|=======================================|
+| Generate Link Code (linkCode)         |
+|                                       |
+| Generates a unique link code for the  |
+| given UUID                            |
+|=======================================|
+| String    | The UUID (with dashes)    |
+|=======================================|
+| Response                              |
+|=======================================|
+| String    | The link code             |
+|=======================================|
+
+|=======================================|
+| Move everyone to lobby  (toLobby)     |
+|                                       |
+| Brings everyone in the voice chat to  |
+| the lobby                             |
+|=======================================|
+| No Arguments                          |
+|=======================================|
+| Response                              |
+|=======================================|
+| None                                  |
+|=======================================|
