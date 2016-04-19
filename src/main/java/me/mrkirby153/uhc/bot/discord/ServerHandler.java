@@ -588,7 +588,7 @@ public class ServerHandler {
             VoiceChannel vc = createVoiceChannel("Lobby");
             getGuild().getUsers().stream().filter(user -> AssignTeams.connectedToVice(this, user)).forEach(user -> getGuild().getManager().moveVoiceUser(user, vc));
             // Remove all roles from the user
-            getGuild().getUsers().stream().filter(u -> !u.isBot()).forEach(u -> getGuild().getRolesForUser(u).forEach(r -> getGuild().getManager().removeRoleFromUser(u, r)));
+            ranks.stream().forEach(DiscordRank::unassignAll);
         }
     }
 
@@ -692,6 +692,8 @@ public class ServerHandler {
         private RoleManager role;
         private DiscordServer server;
 
+        private List<User> assignedUsers = new ArrayList<>();
+
         public DiscordRank(DiscordServer onServer, String rankName) {
             this.rankName = rankName;
             this.server = onServer;
@@ -723,6 +725,7 @@ public class ServerHandler {
                 return;
             server.getGuild().getManager().addRoleToUser(user, role.getRole());
             server.getGuild().getManager().update();
+            assignedUsers.add(user);
         }
 
         /**
@@ -733,6 +736,16 @@ public class ServerHandler {
         public void unassign(User user) {
             GuildManager manager = server.getGuild().getManager();
             manager.removeRoleFromUser(user, role.getRole());
+            manager.update();
+            assignedUsers.remove(user);
+        }
+
+        /**
+         * Removes this role from all users assigned
+         */
+        public void unassignAll(){
+            GuildManager manager = server.getGuild().getManager();
+            assignedUsers.forEach(u -> manager.removeRoleFromUser(u, getRole()));
             manager.update();
         }
 
