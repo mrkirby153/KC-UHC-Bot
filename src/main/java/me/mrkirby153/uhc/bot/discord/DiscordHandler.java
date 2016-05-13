@@ -44,7 +44,7 @@ public class DiscordHandler extends ListenerAdapter {
      */
     public void init() {
         try {
-            jda = new JDABuilder(this.token).addListener(this).buildBlocking();
+            jda = new JDABuilder().setBotToken(this.token).addListener(this).buildBlocking();
         } catch (LoginException | InterruptedException e) {
             e.printStackTrace();
         }
