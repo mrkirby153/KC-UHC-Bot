@@ -87,6 +87,7 @@ public class Main {
         CommandHandler.registerCommand("assignRole", new AssignRole());
         CommandHandler.registerCommand("linkCode", new GetLinkCode());
         CommandHandler.registerCommand("toLobby", new MoveToLobby());
+        CommandHandler.registerCommand("isLinked", new GetLinked());
     }
 
 

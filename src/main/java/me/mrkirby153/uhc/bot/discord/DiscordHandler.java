@@ -121,11 +121,11 @@ public class DiscordHandler extends ListenerAdapter {
             String[] parts = message.split(" ");
             if (parts.length == 0)
                 return;
-            if(parts[1].equalsIgnoreCase("linked")){
-                if(uuidToDiscordCache.containsvalue(event.getAuthor())){
-                    event.getChannel().sendMessage(event.getAuthor().getAsMention()+", you have linked your discord account!");
+            if (parts[1].equalsIgnoreCase("linked")) {
+                if (uuidToDiscordCache.containsvalue(event.getAuthor())) {
+                    event.getChannel().sendMessage(event.getAuthor().getAsMention() + ", you have linked your discord account!");
                 } else {
-                    event.getChannel().sendMessage(event.getAuthor().getAsMention()+", you **haven't** linked your discord account!");
+                    event.getChannel().sendMessage(event.getAuthor().getAsMention() + ", you **haven't** linked your discord account!");
                 }
             }
             if (parts[1].equalsIgnoreCase("relink")) {
@@ -142,7 +142,7 @@ public class DiscordHandler extends ListenerAdapter {
             }
             if (parts[1].equalsIgnoreCase("part")) {
                 Main.logger.info("Leaving server " + event.getGuild().getName());
-                if(ds != null)
+                if (ds != null)
                     ds.destroy();
                 servers.removeConnectedServer(event.getGuild().getId());
                 event.getGuild().getPublicChannel().sendMessage("Goodbye.");
@@ -253,5 +253,25 @@ public class DiscordHandler extends ListenerAdapter {
      */
     public ServerHandler getServerHandler() {
         return servers;
+    }
+
+    /**
+     * Determines if the provided {@link UUID} has their account linked to a discord server
+     *
+     * @param uuid The UUID of the player to check
+     * @return True if the account is linked
+     */
+    public boolean hasLinked(UUID uuid) {
+        return uuidToDiscordCache.containsKey(uuid);
+    }
+
+    /**
+     * Gets the {@link User} linked to this {@link UUID}
+     *
+     * @param uuid The uuid to check
+     * @return The user
+     */
+    public User getLinkedUser(UUID uuid) {
+        return uuidToDiscordCache.get(uuid);
     }
 }

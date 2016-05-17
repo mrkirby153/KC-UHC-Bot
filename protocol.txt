@@ -14,6 +14,7 @@ COMMAND OVERVIEW
 + assignRole
 + linkCode
 + toLobby
++ isLinked
 
 HANDSHAKE
 =========
@@ -154,6 +155,8 @@ The internal name is in parenthesis.
 | String    | The link code             |
 |=======================================|
 
+
+
 |=======================================|
 | Move everyone to lobby  (toLobby)     |
 |                                       |
@@ -165,4 +168,23 @@ The internal name is in parenthesis.
 | Response                              |
 |=======================================|
 | None                                  |
+|=======================================|
+
+
+|=======================================|
+| Verify a UUID's link status  isLinked)|
+|                                       |
+| Verifies if a UUID is linked to a     |
+| Discord user                          |
+|=======================================|
+| String    | The UUID (with dashes)    |
+|=======================================|
+| Response                              |
+|=======================================|
+| Boolean   | If the UUID is linked     |
+|---------------------------------------|
+|  ===[ If the account ls linked ] ===  |
+| String    | The Discord user id       |
+|---------------------------------------|
+| String    | The Discord username      |
 |=======================================|
