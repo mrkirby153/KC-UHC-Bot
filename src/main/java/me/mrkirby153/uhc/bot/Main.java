@@ -88,6 +88,8 @@ public class Main {
         CommandHandler.registerCommand("linkCode", new GetLinkCode());
         CommandHandler.registerCommand("toLobby", new MoveToLobby());
         CommandHandler.registerCommand("isLinked", new GetLinked());
+        CommandHandler.registerCommand("createSpectator", new CreateSpectatorRole());
+        CommandHandler.registerCommand("assignSpectator", new AssignSpectatorRole());
     }
 
 

@@ -33,6 +33,19 @@ public class CreateTeam implements NetworkCommand {
         PermissionOverrideManager voiceChannel = v.createPermissionOverride(rank.getRole());
         PermissionOverrideManager defaultVoiceChannel = v.createPermissionOverride(v.getGuild().getPublicRole());
 
+        if (server.getSpectatorRole() != null) {
+            PermissionOverrideManager spectatorText = c.createPermissionOverride(server.getSpectatorRole());
+            PermissionOverrideManager spectatorVoice = v.createPermissionOverride(server.getSpectatorRole());
+            spectatorText.deny(Permission.MESSAGE_WRITE);
+            spectatorText.grant(Permission.MESSAGE_READ);
+
+            spectatorVoice.deny(Permission.VOICE_SPEAK);
+            spectatorVoice.grant(Permission.VOICE_CONNECT);
+
+            spectatorText.update();
+            spectatorVoice.update();
+        }
+
         textChannel.grant(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
         defaultTextChannel.deny(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
 

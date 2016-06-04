@@ -5,9 +5,11 @@ import com.google.gson.reflect.TypeToken;
 import me.mrkirby153.uhc.bot.Main;
 import me.mrkirby153.uhc.bot.network.commands.AssignTeams;
 import net.dv8tion.jda.JDA;
+import net.dv8tion.jda.Permission;
 import net.dv8tion.jda.entities.*;
 import net.dv8tion.jda.managers.ChannelManager;
 import net.dv8tion.jda.managers.GuildManager;
+import net.dv8tion.jda.managers.PermissionOverrideManager;
 import net.dv8tion.jda.managers.RoleManager;
 
 import java.io.File;
@@ -177,7 +179,7 @@ public class ServerHandler {
             e.printStackTrace();
         }
         // Remove servers that no longer exist
-        if(servers == null)
+        if (servers == null)
             servers = new ArrayList<>();
         Iterator<DiscordServer> serverIterator = servers.iterator();
         while (serverIterator.hasNext()) {
@@ -371,6 +373,11 @@ public class ServerHandler {
         private transient List<DiscordRank> ranks = new ArrayList<>();
         private Object guild;
 
+        private Role spectatorRole;
+
+        private VoiceChannel spectatorVoice;
+        private TextChannel spectatorText;
+
         public DiscordServer(String name, String id) {
             this.name = name;
             this.id = id;
@@ -461,6 +468,9 @@ public class ServerHandler {
             if (ranks == null)
                 ranks = new ArrayList<>();
             ranks.forEach(DiscordRank::delete);
+            spectatorRole.getManager().delete();
+            spectatorVoice.getManager().delete();
+            spectatorText.getManager().delete();
         }
 
         /**
@@ -501,6 +511,36 @@ public class ServerHandler {
             rank.create();
             ranks.add(rank);
             return rank;
+        }
+
+        public void createSpectatorRole() {
+            RoleManager m = getGuild().createRole();
+            m.setName("Spectators");
+            m.update();
+            this.spectatorRole = m.getRole();
+            TextChannel c = createTextChannel("Spectators");
+            VoiceChannel v = createVoiceChannel("Spectators");
+
+            PermissionOverrideManager textChannel = c.createPermissionOverride(spectatorRole);
+            PermissionOverrideManager defaultTextChannel = c.createPermissionOverride(getGuild().getPublicRole());
+            textChannel.grant(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
+            defaultTextChannel.deny(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
+
+            PermissionOverrideManager voiceChannel = v.createPermissionOverride(spectatorRole);
+            PermissionOverrideManager defaultVoiceChannel = v.createPermissionOverride(getGuild().getPublicRole());
+
+            voiceChannel.grant(Permission.VOICE_CONNECT, Permission.VOICE_SPEAK);
+            defaultVoiceChannel.deny(Permission.VOICE_CONNECT, Permission.VOICE_SPEAK);
+            textChannel.update();
+            voiceChannel.update();
+            defaultTextChannel.update();
+            defaultVoiceChannel.update();
+            spectatorVoice = v;
+            spectatorText = c;
+        }
+
+        public void assignSpectatorRole(User user) {
+            getGuild().getManager().addRoleToUser(user, spectatorRole);
         }
 
         /**
@@ -589,6 +629,10 @@ public class ServerHandler {
             getGuild().getUsers().stream().filter(user -> AssignTeams.connectedToVice(this, user)).forEach(user -> getGuild().getManager().moveVoiceUser(user, vc));
             // Remove all roles from the user
             ranks.stream().forEach(DiscordRank::unassignAll);
+        }
+
+        public Role getSpectatorRole() {
+            return spectatorRole;
         }
     }
 
@@ -721,7 +765,7 @@ public class ServerHandler {
          * @param user The user to give the role to
          */
         public void assign(User user) {
-            if(user == null)
+            if (user == null)
                 return;
             server.getGuild().getManager().addRoleToUser(user, role.getRole());
             server.getGuild().getManager().update();
@@ -743,7 +787,7 @@ public class ServerHandler {
         /**
          * Removes this role from all users assigned
          */
-        public void unassignAll(){
+        public void unassignAll() {
             GuildManager manager = server.getGuild().getManager();
             assignedUsers.forEach(u -> manager.removeRoleFromUser(u, getRole()));
             manager.update();
