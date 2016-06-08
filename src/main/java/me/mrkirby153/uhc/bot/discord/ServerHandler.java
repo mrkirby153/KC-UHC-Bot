@@ -468,9 +468,12 @@ public class ServerHandler {
             if (ranks == null)
                 ranks = new ArrayList<>();
             ranks.forEach(DiscordRank::delete);
-            spectatorRole.getManager().delete();
-            spectatorVoice.getManager().delete();
-            spectatorText.getManager().delete();
+            if (spectatorRole != null)
+                spectatorRole.getManager().delete();
+            if (spectatorVoice != null)
+                spectatorVoice.getManager().delete();
+            if (spectatorText != null)
+                spectatorText.getManager().delete();
         }
 
         /**
@@ -514,7 +517,13 @@ public class ServerHandler {
         }
 
         public void createSpectatorRole() {
-            RoleManager m = getGuild().createRole();
+            Role specRole = null;
+            for (Role r : getGuild().getRoles()) {
+                if (r.getName().equalsIgnoreCase("Spectators")) {
+                    specRole = r;
+                }
+            }
+            RoleManager m = (specRole != null) ? specRole.getManager() : getGuild().createRole();
             m.setName("Spectators");
             m.update();
             this.spectatorRole = m.getRole();
