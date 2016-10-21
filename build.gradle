@@ -1,18 +1,42 @@
-apply plugin: 'java'
-apply plugin: 'maven'
+buildscript {
+    repositories {
+        mavenCentral();
+        jcenter();
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+    }
+}
+
+allprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven'
+    repositories {
+        mavenCentral();
+        mavenLocal();
+        jcenter();
+        maven {
+            name = "bintray"
+            url = "http://jcenter.bintray.com"
+        }
+        maven {
+            name = "Sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+    }
+    dependencies {
+        compile 'net.dv8tion:JDA:2.0.0_242'
+        compile 'jline:jline:2.13'
+        compile 'org.apache.logging.log4j:log4j-core:2.5'
+        compile 'com.google.guava:guava-io:r03'
+        compile 'com.google.code.gson:gson:2.6.2'
+    }
+}
+
+apply plugin: 'com.github.johnrengelman.shadow'
 
 group = 'me.mrkirby153'
 version = '1.0-SNAPSHOT'
-
-repositories{
-    mavenCentral();
-    mavenLocal();
-    jcenter();
-}
-configurations{
-    provided
-    compile.extendsFrom provided
-}
 
 jar{
     manifest{
@@ -20,36 +44,13 @@ jar{
     }
 }
 
-repositories {
-    mavenCentral();
-    mavenLocal();
-    jcenter();
-    maven {
-        name = "bintray"
-        url = "http://jcenter.bintray.com"
-    }
-    maven {
-        name = "Sonatype"
-        url = "https://oss.sonatype.org/content/repositories/snapshots/"
-    }
-}
 dependencies{
-    compile 'net.dv8tion:JDA:2.0.0_242'
-    compile 'jline:jline:2.13'
-    compile 'org.apache.logging.log4j:log4j-core:2.5'
-    compile 'com.google.guava:guava-io:r03'
-    compile 'com.google.code.gson:gson:2.6.2'
+    compile project(':network')
 }
-jar {
-    dependsOn configurations.runtime
-    from {
-        (configurations.runtime - configurations.provided).collect {
-            it.isDirectory() ? it : zipTree(it)
-        }
-    } {
-        exclude "META-INF/*.SF"
-        exclude "META-INF/*.DSA"
-        exclude "META-INF/*.RSA"
-    }
+
+build.dependsOn 'shadowJar'
+
+shadowJar {
+    classifier = ''
+    configurations = [project.configurations.compile]
 }
-sourceSets { main { output.resourcesDir = output.classesDir } }

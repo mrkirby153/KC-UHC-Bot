@@ -28,3 +28,5 @@ logs/
 config.properties
 servers.json
 mcServers.json
+
+classes/
