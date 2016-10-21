@@ -1,3 +1,5 @@
 include 'network'
 
 rootProject.name = 'KC-UHC-Bot'
+
+project(':network').name = 'KC-UHC-Bot-Network'

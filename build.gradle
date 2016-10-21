@@ -46,7 +46,7 @@ jar{
 }
 
 dependencies{
-    compile project(':network')
+    compile project(':KC-UHC-Bot-Network')
 }
 
 build.dependsOn 'shadowJar'
