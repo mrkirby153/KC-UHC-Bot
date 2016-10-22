@@ -1,6 +1,7 @@
 package me.mrkirby153.uhc.bot.network.comm;
 
 
+import me.mrkirby153.uhc.bot.network.comm.commands.CommandMessageAck;
 import me.mrkirby153.uhc.bot.network.data.RedisConnection;
 import me.mrkirby153.uhc.bot.network.data.Utility;
 import redis.clients.jedis.Jedis;
@@ -13,6 +14,8 @@ public class BotCommandManager {
     private static BotCommandManager manager;
 
     private HashMap<String, Command> handlerList = new HashMap<>();
+
+    private HashMap<String, BotCommand> waitingCommands = new HashMap<>();
 
     private JedisPool pool;
 
@@ -30,7 +33,10 @@ public class BotCommandManager {
         Class<? extends BotCommandHandler> handler = cmd.handler;
         try{
             BotCommandHandler cmdHandler = handler.newInstance();
-            cmdHandler.handleCommand(Utility.deserialize(serialized, command));
+            BotCommand deserialized = Utility.deserialize(serialized, command);
+            cmdHandler.handleCommand(deserialized);
+            if(!(deserialized instanceof CommandMessageAck))
+                publish(new CommandMessageAck(deserialized.messageId));
         } catch (InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         }
@@ -39,10 +45,16 @@ public class BotCommandManager {
     public void publish(BotCommand command) {
         try(Jedis j = pool.getResource()){
             String commandType = command.getClass().getSimpleName();
+            command.messageId = IdGenerator.generateId();
             String serialized = Utility.serialize(command);
             String channel = CommandListener.SERVER_COMMAND_CHANNEL+":"+commandType;
             j.publish(channel, serialized);
         }
+    }
+
+    public void publishBlocking(BotCommand command){
+        publish(command);
+        waitingCommands.put(command.messageId, command);
     }
 
     public void register(Class<? extends BotCommand> command, Class<? extends BotCommandHandler> handler) {
@@ -63,6 +75,7 @@ public class BotCommandManager {
         };
         thread.setDaemon(true);
         thread.start();
+        BotCommandManager.instance().register(CommandMessageAck.class, MessageAckHandler.class);
     }
 
 
@@ -73,6 +86,40 @@ public class BotCommandManager {
         public Command(Class<? extends BotCommand> command, Class<? extends BotCommandHandler> handler) {
             this.command = command;
             this.handler = handler;
+        }
+    }
+
+    private static class IdGenerator {
+
+        private static long lastMs = -1;
+
+        private static int inc = 1;
+
+        public static String generateId(){
+            long timeMs = System.currentTimeMillis();
+            long newTime = timeMs * (long) Math.pow(2, 12);
+            long procId = (long) Math.pow(2, 8);
+            if(lastMs == timeMs){
+                if(inc < 255)
+                    inc++;
+                else
+                    return null;
+            }
+            long finalId = newTime + procId + inc;
+            return Long.toOctalString(finalId);
+        }
+    }
+
+    public static class MessageAckHandler implements BotCommandHandler{
+
+        @Override
+        public void handleCommand(BotCommand command) {
+            if(command instanceof CommandMessageAck){
+                String id = ((CommandMessageAck) command).getMessageAcked();
+                BotCommand waiting = BotCommandManager.instance().waitingCommands.get(id);
+                if(waiting != null)
+                    waiting.waiting = false;
+            }
         }
     }
 }
