@@ -11,6 +11,8 @@ buildscript {
 allprojects {
     apply plugin: 'java'
     apply plugin: 'maven'
+    apply plugin: 'maven-publish'
+
     repositories {
         mavenCentral();
         mavenLocal();
@@ -27,30 +29,55 @@ allprojects {
     dependencies {
         testCompile 'junit:junit:4.12'
     }
+    group = 'me.mrkirby153'
+    version = '2.0-SNAPSHOT'
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+    publishing {
+        tasks.publish.dependsOn 'build'
+        repositories {
+            maven {
+                name = "mrkirby153"
+                if(project.version.endsWith("-SNAPSHOT")) {
+                    url = project.snapshotUrl
+                } else {
+                    url = project.releaseUrl
+                }
+                credentials {
+                    username project.repositoryUsername
+                    password project.repositoryPassword
+                }
+            }
+        }
+    }
+    dependencies{
+        compile 'com.google.code.gson:gson:2.6.2'
+    }
 }
 
 apply plugin: 'com.github.johnrengelman.shadow'
 
-group = 'me.mrkirby153'
-version = '1.0-SNAPSHOT'
-
-jar{
-    manifest{
+jar {
+    manifest {
         attributes 'Main-Class': 'me.mrkirby153.uhc.bot.Main'
     }
 }
 
-dependencies{
+dependencies {
     compile project(':KC-UHC-Bot-Network')
     compile 'net.dv8tion:JDA:2.2.1_353'
     compile 'jline:jline:2.13'
     compile 'org.apache.logging.log4j:log4j-core:2.5'
     compile 'com.google.guava:guava-io:r03'
-    compile 'com.google.code.gson:gson:2.6.2'
 }
-
 build.dependsOn 'shadowJar'
-
+publishing {
+    publications {
+        shadow(MavenPublication) {
+            from components.shadow
+        }
+    }
+}
 shadowJar {
     classifier = ''
     configurations = [project.configurations.compile]
