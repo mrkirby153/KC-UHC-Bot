@@ -383,6 +383,44 @@ public class ServerHandler {
             this.id = id;
         }
 
+        public void createTeam(String team) {
+            Main.logger.info("Creating team " + team);
+            TextChannel c = createTextChannel("team-" + team);
+            VoiceChannel v = createVoiceChannel("Team " + team);
+            ServerHandler.DiscordRank rank = getRankByName(team);
+            if (rank == null)
+                rank = createRank(team);
+            // Remove permissions
+            PermissionOverrideManager textChannel = c.createPermissionOverride(rank.getRole());
+            PermissionOverrideManager defaultTextChannel = c.createPermissionOverride(c.getGuild().getPublicRole());
+
+            PermissionOverrideManager voiceChannel = v.createPermissionOverride(rank.getRole());
+            PermissionOverrideManager defaultVoiceChannel = v.createPermissionOverride(v.getGuild().getPublicRole());
+
+            if (getSpectatorRole() != null) {
+                PermissionOverrideManager spectatorText = c.createPermissionOverride(getSpectatorRole());
+                PermissionOverrideManager spectatorVoice = v.createPermissionOverride(getSpectatorRole());
+                spectatorText.deny(Permission.MESSAGE_WRITE);
+                spectatorText.grant(Permission.MESSAGE_READ);
+
+                spectatorVoice.deny(Permission.VOICE_SPEAK);
+                spectatorVoice.grant(Permission.VOICE_CONNECT);
+
+                spectatorText.update();
+                spectatorVoice.update();
+            }
+
+            textChannel.grant(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
+            defaultTextChannel.deny(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
+
+            voiceChannel.grant(Permission.VOICE_CONNECT, Permission.VOICE_SPEAK);
+            defaultVoiceChannel.deny(Permission.VOICE_CONNECT, Permission.VOICE_SPEAK);
+            textChannel.update();
+            defaultTextChannel.update();
+            voiceChannel.update();
+            defaultVoiceChannel.update();
+        }
+
         /**
          * Gets the name of the discord server
          *
