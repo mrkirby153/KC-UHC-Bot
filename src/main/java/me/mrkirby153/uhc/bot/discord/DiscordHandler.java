@@ -1,7 +1,7 @@
 package me.mrkirby153.uhc.bot.discord;
 
 import me.mrkirby153.uhc.bot.Main;
-import me.mrkirby153.uhc.bot.cache.Cache;
+import me.mrkirby153.uhc.bot.network.PlayerInfo;
 import net.dv8tion.jda.JDA;
 import net.dv8tion.jda.JDABuilder;
 import net.dv8tion.jda.entities.*;
@@ -13,8 +13,6 @@ import net.dv8tion.jda.hooks.ListenerAdapter;
 import javax.security.auth.login.LoginException;
 import java.io.File;
 import java.security.SecureRandom;
-import java.text.SimpleDateFormat;
-import java.util.HashMap;
 import java.util.Random;
 import java.util.UUID;
 
@@ -30,9 +28,6 @@ public class DiscordHandler extends ListenerAdapter {
     private JDA jda;
     private ServerHandler servers;
     private boolean ready = false;
-    private HashMap<String, UUID> codeToPlayerMap = new HashMap<>();
-    private HashMap<UUID, String> uuidToNameMap = new HashMap<>();
-    private Cache<UUID, User> uuidToDiscordCache = new Cache<>(1000 * 60 * 60 * 6);
 
     public DiscordHandler(String botToken, File workingDir) {
         this.token = botToken;
@@ -122,8 +117,9 @@ public class DiscordHandler extends ListenerAdapter {
             if (parts.length == 0)
                 return;
             if (parts[1].equalsIgnoreCase("linked")) {
-                if (uuidToDiscordCache.containsvalue(event.getAuthor())) {
-                    event.getChannel().sendMessage(event.getAuthor().getAsMention() + ", you have linked your discord account!");
+                PlayerInfo playerInfo = Main.uhcNetwork.getPlayerInfo(event.getAuthor().getId());
+                if (playerInfo != null) {
+                    event.getChannel().sendMessage(event.getAuthor().getAsMention() + ", you " + ((playerInfo.isLinked()) ? "have " : "**haven't** ") + "linked your discord account!");
                 } else {
                     event.getChannel().sendMessage(event.getAuthor().getAsMention() + ", you **haven't** linked your discord account!");
                 }
@@ -152,30 +148,6 @@ public class DiscordHandler extends ListenerAdapter {
     }
 
     /**
-     * Generates a link code. (Used to link minecraft names to the server)
-     *
-     * @param forPlayer  The player to generate the code for
-     * @param playerName The player's name
-     * @return The player's unique lnik code
-     */
-    public String generateLinkCode(UUID forPlayer, String playerName) {
-        String code = generateCode(5);
-        codeToPlayerMap.put(code, forPlayer);
-        uuidToNameMap.put(forPlayer, playerName);
-        return code;
-    }
-
-    /**
-     * Checks if the link exists
-     *
-     * @param code The code to verify existence
-     * @return True if the code exists, false if it doesn't
-     */
-    public boolean linkExists(String code) {
-        return codeToPlayerMap.containsKey(code);
-    }
-
-    /**
      * Performs the link of the discord name to the uuid
      *
      * @param code      The code used in the linking process
@@ -184,20 +156,14 @@ public class DiscordHandler extends ListenerAdapter {
      * @return True if the link was successful, fase if it wasn't
      */
     public boolean link(String code, User user, Channel inChannel) {
-        if (!linkExists(code)) {
+        PlayerInfo info = Main.uhcNetwork.getPlayerByLinkCode(code);
+        if (info == null) {
             ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", that code was invalid!");
             return false;
         }
-        UUID u = codeToPlayerMap.remove(code);
-        String name = uuidToNameMap.get(u);
-        long expiresOn = System.currentTimeMillis() + uuidToDiscordCache.getExpireTime();
-        uuidToDiscordCache.put(u, user);
-        if (inChannel instanceof MessageChannel) {
-            ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", you have linked your account to the minecraft name " + name + ". This link is valid for 6 hours, until at which, it will" +
-                    " automatically expire");
-            SimpleDateFormat sdf = new SimpleDateFormat("yyy-MM-dd HH:mm:ss");
-            ((MessageChannel) inChannel).sendMessage("This link will expire on " + sdf.format(expiresOn));
-        }
+        info.setDiscordUser(user.getId());
+        info.update();
+        ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", you have linked your account to the minecraft name `" + info.getName() + "`");
         return true;
     }
 
@@ -208,7 +174,12 @@ public class DiscordHandler extends ListenerAdapter {
      * @return The user
      */
     public User getUser(UUID u) {
-        return uuidToDiscordCache.get(u);
+        PlayerInfo info = Main.uhcNetwork.getPlayerInfo(u);
+        if (info != null) {
+            return jda.getUserById(info.getDiscordUser());
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -256,22 +227,12 @@ public class DiscordHandler extends ListenerAdapter {
     }
 
     /**
-     * Determines if the provided {@link UUID} has their account linked to a discord server
-     *
-     * @param uuid The UUID of the player to check
-     * @return True if the account is linked
-     */
-    public boolean hasLinked(UUID uuid) {
-        return uuidToDiscordCache.containsKey(uuid);
-    }
-
-    /**
      * Gets the {@link User} linked to this {@link UUID}
      *
      * @param uuid The uuid to check
      * @return The user
      */
     public User getLinkedUser(UUID uuid) {
-        return uuidToDiscordCache.get(uuid);
+        return jda.getUserById(Main.uhcNetwork.getPlayerInfo(uuid).getDiscordUser());
     }
 }

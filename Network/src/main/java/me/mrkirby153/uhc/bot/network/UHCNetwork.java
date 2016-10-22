@@ -25,6 +25,22 @@ public class UHCNetwork {
         return info;
     }
 
+    public PlayerInfo getPlayerInfo(String discordId){
+        for(PlayerInfo i : playerData.getElements()){
+            if(i.getDiscordUser().equalsIgnoreCase(discordId))
+                return i;
+        }
+        return null;
+    }
+
+    public PlayerInfo getPlayerByLinkCode(String code){
+        for(PlayerInfo i : playerData.getElements()){
+            if(i.getLinkCode().equalsIgnoreCase(code))
+                return i;
+        }
+        return null;
+    }
+
     public void updatePlayer(PlayerInfo info){
         playerData.updateElement(info.getIdentifier(), info);
     }

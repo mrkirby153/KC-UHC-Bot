@@ -46,6 +46,7 @@ public class BotCommandManager {
     }
 
     public void register(Class<? extends BotCommand> command, Class<? extends BotCommandHandler> handler) {
+        System.out.println("Registering "+command.getCanonicalName()+" with listener "+handler.getCanonicalName());
         this.handlerList.put(command.getSimpleName(), new Command(command, handler));
     }
 

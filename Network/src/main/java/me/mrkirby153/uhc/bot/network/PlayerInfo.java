@@ -7,11 +7,15 @@ import java.util.UUID;
 public class PlayerInfo implements RedisData {
 
     private final UUID uuid;
+    private final String name;
     protected transient UHCNetwork network;
     private String discordUser;
+    private String linkCode;
+    private boolean linked;
 
-    public PlayerInfo(UUID uuid) {
+    public PlayerInfo(UUID uuid, String name) {
         this.uuid = uuid;
+        this.name = name;
     }
 
     public String getDiscordUser() {
@@ -27,8 +31,28 @@ public class PlayerInfo implements RedisData {
         return uuid.toString();
     }
 
+    public String getLinkCode() {
+        return linkCode;
+    }
+
+    public void setLinkCode(String linkCode) {
+        this.linkCode = linkCode;
+    }
+
+    public String getName() {
+        return name;
+    }
+
     public UUID getUuid() {
         return uuid;
+    }
+
+    public boolean isLinked() {
+        return linked;
+    }
+
+    public void setLinked(boolean linked) {
+        this.linked = linked;
     }
 
     public void update() {

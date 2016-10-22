@@ -3,7 +3,7 @@ package me.mrkirby153.uhc.bot.discord;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import me.mrkirby153.uhc.bot.Main;
-import me.mrkirby153.uhc.bot.network.commands.AssignTeams;
+import me.mrkirby153.uhc.bot.network.BotCommandHandlers;
 import net.dv8tion.jda.JDA;
 import net.dv8tion.jda.Permission;
 import net.dv8tion.jda.entities.*;
@@ -673,9 +673,9 @@ public class ServerHandler {
 
         public void bringAllToLobby() {
             VoiceChannel vc = createVoiceChannel("Lobby");
-            getGuild().getUsers().stream().filter(user -> AssignTeams.connectedToVice(this, user)).forEach(user -> getGuild().getManager().moveVoiceUser(user, vc));
+            getGuild().getUsers().stream().filter(user -> BotCommandHandlers.AssignTeams.connectedToVice(this, user)).forEach(user -> getGuild().getManager().moveVoiceUser(user, vc));
             // Remove all roles from the user
-            ranks.stream().forEach(DiscordRank::unassignAll);
+            ranks.forEach(DiscordRank::unassignAll);
         }
 
         public Role getSpectatorRole() {

@@ -26,7 +26,7 @@ allprojects {
     }
     dependencies {
         testCompile 'junit:junit:4.12'
-        compile 'net.dv8tion:JDA:2.0.0_242'
+        compile 'net.dv8tion:JDA:2.2.1_353'
         compile 'jline:jline:2.13'
         compile 'org.apache.logging.log4j:log4j-core:2.5'
         compile 'com.google.guava:guava-io:r03'
