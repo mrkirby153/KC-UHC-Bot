@@ -21,27 +21,32 @@ public class UHCNetwork {
 
     public PlayerInfo getPlayerInfo(UUID uuid) {
         PlayerInfo info = playerData.getElement(uuid.toString());
-        info.network = this;
+        if (info != null)
+            info.network = this;
         return info;
     }
 
-    public PlayerInfo getPlayerInfo(String discordId){
-        for(PlayerInfo i : playerData.getElements()){
-            if(i.getDiscordUser().equalsIgnoreCase(discordId))
+    public PlayerInfo getPlayerInfo(String discordId) {
+        for (PlayerInfo i : playerData.getElements()) {
+            if (i.getDiscordUser().equalsIgnoreCase(discordId)) {
+                i.network = this;
                 return i;
+            }
         }
         return null;
     }
 
-    public PlayerInfo getPlayerByLinkCode(String code){
-        for(PlayerInfo i : playerData.getElements()){
-            if(i.getLinkCode().equalsIgnoreCase(code))
+    public PlayerInfo getPlayerByLinkCode(String code) {
+        for (PlayerInfo i : playerData.getElements()) {
+            if (i.getLinkCode().equalsIgnoreCase(code)) {
+                i.network = this;
                 return i;
+            }
         }
         return null;
     }
 
-    public void updatePlayer(PlayerInfo info){
+    public void updatePlayer(PlayerInfo info) {
         playerData.updateElement(info.getIdentifier(), info);
     }
 }
