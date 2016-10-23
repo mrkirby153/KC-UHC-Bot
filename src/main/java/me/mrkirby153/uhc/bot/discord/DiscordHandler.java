@@ -162,6 +162,8 @@ public class DiscordHandler extends ListenerAdapter {
             return false;
         }
         info.setDiscordUser(user.getId());
+        info.setLinked(true);
+        info.setLinkCode("");
         info.update();
         ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", you have linked your account to the minecraft name `" + info.getName() + "`");
         return true;
