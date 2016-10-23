@@ -18,11 +18,6 @@ target/
 # .bak files
 *.bak
 
-# Gradle
-.gradle/
-gradle.properties
-build/
-
 # KC-UHC Bot
 logs/
 config.properties
@@ -30,3 +25,4 @@ servers.json
 mcServers.json
 
 classes/
+*dependency-reduced-pom.xml

@@ -34,9 +34,12 @@ public class BotCommandManager {
         try{
             BotCommandHandler cmdHandler = handler.newInstance();
             BotCommand deserialized = Utility.deserialize(serialized, command);
+            System.out.println("Handling message "+deserialized.getClass().getCanonicalName());
             cmdHandler.handleCommand(deserialized);
-            if(!(deserialized instanceof CommandMessageAck))
+            if(!(deserialized instanceof CommandMessageAck)) {
+                System.out.println("Sending acknowledgement of "+deserialized.getClass().getCanonicalName());
                 publish(new CommandMessageAck(deserialized.messageId));
+            }
         } catch (InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
         }
