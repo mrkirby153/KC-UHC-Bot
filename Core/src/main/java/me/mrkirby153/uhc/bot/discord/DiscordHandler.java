@@ -121,6 +121,8 @@ public class DiscordHandler extends ListenerAdapter {
         Message m = event.getMessage();
         String message = m.getRawContent();
         DiscordGuild ds = getServerHandler().getById(event.getGuild().getId());
+        if(ds.shouldDeleteAllMessages())
+            ds.queueForDelete(m);
         if(m.getAuthor().getId().equals(jda.getSelfInfo().getId())){
             ds.queueForDelete(m);
         }
@@ -170,6 +172,10 @@ public class DiscordHandler extends ListenerAdapter {
             if(parts[1].equalsIgnoreCase("unlockChannels")){
                 event.getChannel().sendMessage("Unlocking all channels on the server");
                 ds.unlockChannels();
+            }
+            if(parts[1].equalsIgnoreCase("toggleDeleteAll")){
+                ds.setDeleteAllMessages(!ds.shouldDeleteAllMessages());
+                event.getChannel().sendMessage("Deleting all messages set to `"+ds.shouldDeleteAllMessages()+"`");
             }
             if(parts[1].equalsIgnoreCase("unlockChannel") || parts[1].equalsIgnoreCase("lockChannel")){
                 String channel = "";

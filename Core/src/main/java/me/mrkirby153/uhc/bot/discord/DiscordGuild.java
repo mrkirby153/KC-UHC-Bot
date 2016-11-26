@@ -53,6 +53,11 @@ public class DiscordGuild {
 
     private transient ArrayList<Message> messagesToDelete = new ArrayList<>();
 
+    /**
+     * Flag determining if all messages sent while the bot is running should be queued for deletion
+     */
+    private transient boolean deleteAllMessages = false;
+
 
     public DiscordGuild(String name, String id) {
         this.name = name;
@@ -253,6 +258,14 @@ public class DiscordGuild {
 
     public String getName() {
         return name;
+    }
+
+    public boolean shouldDeleteAllMessages() {
+        return deleteAllMessages;
+    }
+
+    public void setDeleteAllMessages(boolean deleteAllMessages) {
+        this.deleteAllMessages = deleteAllMessages;
     }
 
     public void setName(String name) {
