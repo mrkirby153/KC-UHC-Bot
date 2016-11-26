@@ -50,10 +50,11 @@ public class ServerHandler {
      *
      * @param guild The {@link Guild} to add
      */
-    public void addConnectedServer(Guild guild) {
+    public DiscordGuild addConnectedServer(Guild guild) {
         DiscordGuild e = new DiscordGuild(guild.getName(), guild.getId());
         servers.add(e);
         save();
+        return e;
     }
 
     /**

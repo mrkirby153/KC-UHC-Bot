@@ -121,8 +121,6 @@ public class DiscordHandler extends ListenerAdapter {
         Message m = event.getMessage();
         String message = m.getRawContent();
         DiscordGuild ds = getServerHandler().getById(event.getGuild().getId());
-        if (ds == null)
-            return;
         if(m.getAuthor().getId().equals(jda.getSelfInfo().getId())){
             ds.queueForDelete(m);
         }
@@ -132,6 +130,12 @@ public class DiscordHandler extends ListenerAdapter {
             String[] parts = message.split(" ");
             if (parts.length == 0)
                 return;
+            if (parts[1].equalsIgnoreCase("relink")) {
+                DiscordGuild guild = linkGuild(event.getGuild());
+                guild.create();
+            }
+            if(ds == null)
+                return;
             if (parts[1].equalsIgnoreCase("linked")) {
                 PlayerInfo playerInfo = Main.uhcNetwork.getPlayerInfo(event.getAuthor().getId());
                 if (playerInfo != null) {
@@ -139,9 +143,6 @@ public class DiscordHandler extends ListenerAdapter {
                 } else {
                     event.getChannel().sendMessage(event.getAuthor().getAsMention() + ", you **haven't** linked your discord account!");
                 }
-            }
-            if (parts[1].equalsIgnoreCase("relink")) {
-                linkGuild(event.getGuild());
             }
             if (parts[1].equalsIgnoreCase("id")) {
                 event.getGuild().getPublicChannel().sendMessage("The server id is `" + event.getGuild().getId() + "`");
@@ -216,9 +217,9 @@ public class DiscordHandler extends ListenerAdapter {
      *
      * @param guild The guild
      */
-    private void linkGuild(Guild guild) {
+    private DiscordGuild linkGuild(Guild guild) {
         Main.logger.info("Linked server " + guild.getName() + "!");
         guild.getPublicChannel().sendMessage("ID retrieval successful! For reference, this guild's id is `" + guild.getId() + "`");
-        servers.addConnectedServer(guild);
+        return servers.addConnectedServer(guild);
     }
 }
