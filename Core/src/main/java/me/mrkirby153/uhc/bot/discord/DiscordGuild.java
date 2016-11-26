@@ -44,14 +44,14 @@ public class DiscordGuild {
     /**
      * The spectator role on the server
      */
-    private Role spectatorRole;
+    private transient Role spectatorRole;
 
     /**
      * The Spectator's voice channel
      */
-    private VoiceChannel spectatorVoiceChannel;
+    private transient VoiceChannel spectatorVoiceChannel;
 
-    private ArrayList<Message> messagesToDelete = new ArrayList<>();
+    private transient ArrayList<Message> messagesToDelete = new ArrayList<>();
 
 
     public DiscordGuild(String name, String id) {
