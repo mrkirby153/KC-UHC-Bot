@@ -115,7 +115,7 @@ public class DiscordGuild {
      * @throws IllegalArgumentException If the team already exists
      */
     public void createTeam(String team) {
-        if(teams == null)
+        if (teams == null)
             teams = new HashMap<>();
         if (teams.containsKey(team.toLowerCase())) {
             teams.remove(team.toLowerCase()).destroy();
@@ -325,12 +325,33 @@ public class DiscordGuild {
         permissionManager.update();
     }
 
+    /**
+     * Locks (prevents users from joining) a channel by its name
+     *
+     * @param channel The channel name to lock
+     */
     public void lockChannel(String channel) {
-        getAllChannels().stream().filter(c -> c.getName().equalsIgnoreCase(channel)).forEach(c -> deny(guild.getPublicRole(), c.getManager(), Permission.VOICE_CONNECT, Permission.MESSAGE_WRITE, Permission.MESSAGE_READ));
+        getAllChannels().stream().filter(c -> c.getName().equalsIgnoreCase(channel)).forEach(this::lockChannel);
     }
 
+    /**
+     * Locks a channel
+     *
+     * @param channel The channel to lock
+     */
+    public void lockChannel(Channel channel) {
+        deny(guild.getPublicRole(), channel.getManager(), Permission.VOICE_CONNECT, Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
+        // Allow the UHC bot to still send messages
+        PermissionOverrideManager self = channel.createPermissionOverride(jda.getSelfInfo());
+        self.grant(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
+        self.update();
+    }
+
+    /**
+     * Locks all the channels on the discord server
+     */
     public void lockChannels() {
-        getAllChannels().stream().map(Channel::getName).forEach(this::lockChannel);
+        getAllChannels().forEach(this::lockChannel);
     }
 
     public void queueForDelete(Message message) {
@@ -353,14 +374,31 @@ public class DiscordGuild {
         this.teams.remove(name.toLowerCase()).destroy();
     }
 
+    /**
+     * Unlocks a channel by its name
+     *
+     * @param channel The name of the channel to unlock
+     */
     public void unlockChannel(String channel) {
         for (Channel c : getAllChannels()) {
             if (c.getName().equalsIgnoreCase(channel)) {
-                for (PermissionOverride permissionOverride : c.getPermissionOverrides()) {
-                    PermissionOverrideManager mg = permissionOverride.getManager();
-                    mg.delete();
-                }
+                unlockChannel(c);
             }
+        }
+    }
+
+    /**
+     * Unlocks a channel
+     *
+     * @param channel The {@link Channel} to unlock
+     */
+    public void unlockChannel(Channel channel) {
+        for (PermissionOverride permissionOverride : channel.getPermissionOverrides()) {
+            PermissionOverrideManager mg = permissionOverride.getManager();
+            if (permissionOverride.isRoleOverride() && permissionOverride.getRole().equals(guild.getPublicRole()))
+                mg.delete();
+            if(permissionOverride.isUserOverride() && permissionOverride.getUser().equals(jda.getSelfInfo()))
+                mg.delete();
         }
     }
 
