@@ -6,7 +6,9 @@ import me.mrkirby153.uhc.bot.discord.DiscordHandler;
 import me.mrkirby153.uhc.bot.network.BotCommandHandlers;
 import me.mrkirby153.uhc.bot.network.UHCNetwork;
 import me.mrkirby153.uhc.bot.network.comm.BotCommandManager;
-import me.mrkirby153.uhc.bot.network.comm.commands.*;
+import me.mrkirby153.uhc.bot.network.comm.commands.BotCommandAssignSpectator;
+import me.mrkirby153.uhc.bot.network.comm.commands.BotCommandLink;
+import me.mrkirby153.uhc.bot.network.comm.commands.BotCommandToLobby;
 import me.mrkirby153.uhc.bot.network.comm.commands.team.BotCommandAssignTeams;
 import me.mrkirby153.uhc.bot.network.comm.commands.team.BotCommandNewTeam;
 import me.mrkirby153.uhc.bot.network.comm.commands.team.BotCommandRemoveTeam;
@@ -26,9 +28,8 @@ public class Main {
 
     public static boolean isRunning = true;
     public static DiscordHandler discordHandler;
-    private static Properties config = new Properties();
-//    private static NetworkHandler networkHandler;
     public static UHCNetwork uhcNetwork;
+    private static Properties config = new Properties();
 
     public static void main(String[] args) throws Exception {
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
@@ -58,6 +59,7 @@ public class Main {
         while (isRunning && (line = consoleReader.readLine()) != null) {
             if (line.equalsIgnoreCase("shutdown")) {
                 Main.logger.info("Shutdown initiated...");
+                uhcNetwork.getDatastore().getElements().forEach(e -> uhcNetwork.getDatastore().removeElement(e));
                 Main.discordHandler.shutdown();
                 Main.logger.info("Waiting for final API calls");
                 Thread.sleep(2000);
