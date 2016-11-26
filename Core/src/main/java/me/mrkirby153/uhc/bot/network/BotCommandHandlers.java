@@ -1,10 +1,9 @@
 package me.mrkirby153.uhc.bot.network;
 
 import me.mrkirby153.uhc.bot.Main;
-import me.mrkirby153.uhc.bot.discord.ServerHandler;
+import me.mrkirby153.uhc.bot.discord.DiscordGuild;
 import me.mrkirby153.uhc.bot.network.comm.BotCommand;
 import me.mrkirby153.uhc.bot.network.comm.BotCommandHandler;
-import me.mrkirby153.uhc.bot.network.comm.commands.BotCommandAssignRole;
 import me.mrkirby153.uhc.bot.network.comm.commands.BotCommandAssignSpectator;
 import me.mrkirby153.uhc.bot.network.comm.commands.BotCommandLink;
 import me.mrkirby153.uhc.bot.network.comm.commands.ServerCommand;
@@ -15,12 +14,10 @@ import net.dv8tion.jda.entities.Role;
 import net.dv8tion.jda.entities.User;
 import net.dv8tion.jda.entities.VoiceChannel;
 
-import java.util.UUID;
-
 public class BotCommandHandlers {
 
 
-    protected static ServerHandler.DiscordServer getServer(String id) {
+    protected static DiscordGuild getServer(String id) {
         return Main.discordHandler.getServerHandler().getForMineraftServer(id);
     }
 
@@ -53,7 +50,7 @@ public class BotCommandHandlers {
         public void handleCommand(BotCommand command) {
             if (command instanceof BotCommandRemoveTeam) {
                 BotCommandRemoveTeam cmd = (BotCommandRemoveTeam) command;
-                ServerHandler.DiscordServer server = getServer(cmd.getServerId());
+                DiscordGuild server = getServer(cmd.getServerId());
                 server.deleteChannel("team-" + cmd.getTeamName());
                 server.deleteChannel("Team " + cmd.getTeamName());
             }
@@ -65,14 +62,14 @@ public class BotCommandHandlers {
         @Override
         public void handleCommand(BotCommand command) {
             if (command instanceof BotCommandAssignTeams) {
-                ServerHandler.DiscordServer server = getServer(((BotCommandAssignTeams) command).getServerId());
+                DiscordGuild server = getServer(((BotCommandAssignTeams) command).getServerId());
                 ((BotCommandAssignTeams) command).getTeams().forEach((u, team) -> {
                     User user = Main.discordHandler.getUser(u);
                     if (user == null)
                         return;
-                    server.assignRank(user, team);
+                    server.getTeam(team).assignUser(user);
                     if (connectedToVice(server, user)) {
-                        VoiceChannel channel = server.getVoiceChannel("Team " + team);
+                        VoiceChannel channel = (VoiceChannel) server.getChannel("Team " + team, DiscordGuild.ChannelType.VOICE);
                         if (channel != null) {
                             server.getGuild().getManager().moveVoiceUser(user, channel);
                         }
@@ -81,7 +78,7 @@ public class BotCommandHandlers {
             }
         }
 
-        public static boolean connectedToVice(ServerHandler.DiscordServer server, User user) {
+        public static boolean connectedToVice(DiscordGuild server, User user) {
             for (VoiceChannel c : server.getGuild().getVoiceChannels()) {
                 if (c.getUsers() != null)
                     for (User u : c.getUsers()) {
@@ -90,22 +87,6 @@ public class BotCommandHandlers {
                     }
             }
             return false;
-        }
-    }
-
-    public static class AssignRole implements BotCommandHandler {
-
-        @Override
-        public void handleCommand(BotCommand command) {
-            if (command instanceof BotCommandAssignRole) {
-                BotCommandAssignRole cmd = (BotCommandAssignRole) command;
-                UUID u = cmd.getUser();
-                String role = cmd.getRole();
-                ServerHandler.DiscordRank rank = getServer(cmd.getServerId()).getRankByName(role);
-                User user = Main.discordHandler.getUser(u);
-                if (user != null && rank != null)
-                    rank.assign(user);
-            }
         }
     }
 
@@ -118,15 +99,6 @@ public class BotCommandHandlers {
         }
     }
 
-    public static class CreateSpectator implements BotCommandHandler {
-
-        @Override
-        public void handleCommand(BotCommand command) {
-            if (command instanceof ServerCommand)
-                getServer(((ServerCommand) command).getServerId()).createSpectatorRole();
-        }
-    }
-
     public static class AssignSpectator implements BotCommandHandler {
 
         @Override
@@ -134,7 +106,7 @@ public class BotCommandHandlers {
             if (command instanceof BotCommandAssignSpectator) {
                 User u = Main.discordHandler.getLinkedUser(((BotCommandAssignSpectator) command).getUser());
                 if (u != null) {
-                    ServerHandler.DiscordServer server = getServer(((BotCommandAssignSpectator) command).getServerId());
+                    DiscordGuild server = getServer(((BotCommandAssignSpectator) command).getServerId());
                     Role spectatorRole = server.getSpectatorRole();
                     server.getGuild().getManager().addRoleToUser(u, spectatorRole);
                     server.getGuild().getManager().update();

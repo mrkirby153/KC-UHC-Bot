@@ -2,6 +2,7 @@ package me.mrkirby153.uhc.bot.network.comm.commands;
 
 import java.util.UUID;
 
+@Deprecated
 public class BotCommandAssignRole extends ServerCommand {
 
     private final UUID user;

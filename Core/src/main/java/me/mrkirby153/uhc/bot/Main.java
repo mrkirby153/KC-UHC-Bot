@@ -48,8 +48,6 @@ public class Main {
         int redisPort = Integer.parseInt(config.getProperty("redis-port"));
         String redisPassword = config.getProperty("redis-password");
         uhcNetwork = new UHCNetwork(new RedisConnection(redisHost, redisPort, !redisPassword.equals("")? redisPassword : null));
-//        networkHandler = new NetworkHandler(6969);
-//        networkHandler.start();
         Main.logger.info("Registering network commands");
         registerCommands();
         Main.logger.info("Initializing console...");
@@ -59,6 +57,10 @@ public class Main {
         String line;
         while (isRunning && (line = consoleReader.readLine()) != null) {
             if (line.equalsIgnoreCase("shutdown")) {
+                Main.logger.info("Shutdown initiated...");
+                Main.discordHandler.shutdown();
+                Main.logger.info("Waiting for final API calls");
+                Thread.sleep(2000);
                 System.exit(0);
                 return;
             }
@@ -93,23 +95,11 @@ public class Main {
     }
 
     private static void registerCommands() {
-/*        CommandHandler.registerCommand("link", new LinkServer());
-        CommandHandler.registerCommand("newTeam", new CreateTeam());
-        CommandHandler.registerCommand("removeTeam", new RemoveTeam());
-        CommandHandler.registerCommand("assignTeams", new AssignTeams());
-        CommandHandler.registerCommand("assignRole", new AssignRole());
-        CommandHandler.registerCommand("linkCode", new GetLinkCode());
-        CommandHandler.registerCommand("toLobby", new MoveToLobby());
-        CommandHandler.registerCommand("isLinked", new GetLinked());
-        CommandHandler.registerCommand("createSpectator", new CreateSpectatorRole());
-        CommandHandler.registerCommand("assignSpectator", new AssignSpectatorRole());*/
         BotCommandManager.instance().register(BotCommandLink.class, BotCommandHandlers.LinkServer.class);
         BotCommandManager.instance().register(BotCommandNewTeam.class, BotCommandHandlers.CreateTeam.class);
         BotCommandManager.instance().register(BotCommandRemoveTeam.class, BotCommandHandlers.RemoveTeam.class);
         BotCommandManager.instance().register(BotCommandAssignTeams.class, BotCommandHandlers.AssignTeams.class);
-        BotCommandManager.instance().register(BotCommandAssignRole.class, BotCommandHandlers.AssignRole.class);
         BotCommandManager.instance().register(BotCommandToLobby.class, BotCommandHandlers.ToLobby.class);
-        BotCommandManager.instance().register(BotCommandCreateSpectator.class, BotCommandHandlers.CreateSpectator.class);
         BotCommandManager.instance().register(BotCommandAssignSpectator.class, BotCommandHandlers.AssignSpectator.class);
     }
 
@@ -122,8 +112,8 @@ public class Main {
 
         @Override
         public void run() {
-            if (Main.discordHandler != null)
-                Main.discordHandler.shutdown();
+/*            if (Main.discordHandler != null)
+                Main.discordHandler.shutdown();*/
 /*            if (networkHandler != null)
                 Main.networkHandler.shutdown();*/
             Main.logger.info("Goodbye");

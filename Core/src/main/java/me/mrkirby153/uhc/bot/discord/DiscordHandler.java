@@ -7,7 +7,6 @@ import net.dv8tion.jda.JDABuilder;
 import net.dv8tion.jda.entities.*;
 import net.dv8tion.jda.events.guild.GuildJoinEvent;
 import net.dv8tion.jda.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.exceptions.PermissionException;
 import net.dv8tion.jda.hooks.ListenerAdapter;
 
 import javax.security.auth.login.LoginException;
@@ -35,6 +34,40 @@ public class DiscordHandler extends ListenerAdapter {
     }
 
     /**
+     * Gets the {@link User} linked to this {@link UUID}
+     *
+     * @param uuid The uuid to check
+     * @return The user
+     */
+    public User getLinkedUser(UUID uuid) {
+        return jda.getUserById(Main.uhcNetwork.getPlayerInfo(uuid).getDiscordUser());
+    }
+
+    /**
+     * Gets the {@link ServerHandler} handler used for this discord handler
+     *
+     * @return A {@link ServerHandler}
+     */
+    public ServerHandler getServerHandler() {
+        return servers;
+    }
+
+    /**
+     * Gets the Discord {@link User} whose account is linked to the given UUID
+     *
+     * @param u The uuid
+     * @return The user
+     */
+    public User getUser(UUID u) {
+        PlayerInfo info = Main.uhcNetwork.getPlayerInfo(u);
+        if (info != null) {
+            return jda.getUserById(info.getDiscordUser());
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Initializes the robot
      */
     public void init() {
@@ -44,55 +77,33 @@ public class DiscordHandler extends ListenerAdapter {
             e.printStackTrace();
         }
         servers = new ServerHandler(this.jda, new File(workingDir, "servers.json"));
-        ServerHandler.DiscordServer.jda = this.jda;
+        DiscordGuild.setJda(this.jda);
         servers.init();
-        Main.logger.info("Creating discord channels");
-        for (ServerHandler.DiscordServer s : servers.connectedServers()) {
-            initChannels(s);
-        }
-        ready = true;
     }
 
     /**
-     * Creates the channels on the given server
+     * Performs the link of the discord name to the uuid
      *
-     * @param s The server
+     * @param code      The code used in the linking process
+     * @param user      The user to link
+     * @param inChannel The channel this link is occurring in
+     * @return True if the link was successful, fase if it wasn't
      */
-    public void initChannels(ServerHandler.DiscordServer s, boolean triedBefore) {
-        try {
-            TextChannel tc = s.createTextChannel("uhc-link");
-            tc.getManager().setTopic("[KC-UHC] Please log into the server and follow the instructions!");
-            tc.getManager().update();
-        } catch (PermissionException e) {
-            // Delay execution
-            if (triedBefore) {
-                servers.getById(s.getId()).getGuild().getPublicChannel().sendMessage("**ERROR:** __Could not create the required channels because I do not have permission!__");
-                return;
-            }
-            Thread t = new Thread() {
-                @Override
-                public void run() {
-                    try {
-                        Main.logger.info("Delaying for 1 second to allow role to propagate");
-                        Thread.sleep(1000);
-                        initChannels(s, true);
-                    } catch (InterruptedException e1) {
-                        e1.printStackTrace();
-                    }
-                }
-            };
-            t.setName("ChannelCreator");
-            t.start();
+    public boolean link(String code, User user, Channel inChannel) {
+        PlayerInfo info = Main.uhcNetwork.getPlayerByLinkCode(code);
+        if (info == null) {
+            ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", that code was invalid!");
+            return false;
         }
-    }
-
-    /**
-     * Creates channels on the given server
-     *
-     * @param s The server
-     */
-    public void initChannels(ServerHandler.DiscordServer s) {
-        initChannels(s, false);
+        info.setDiscordUser(user.getId());
+        info.setLinked(true);
+        info.setLinkCode("");
+        info.update();
+        Message m = ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", you have linked your account to the minecraft name `" + info.getName() + "`");
+        DiscordGuild dg = getServerHandler().getById(((TextChannel) m.getChannel()).getGuild().getId());
+        if (dg != null)
+            dg.queueForDelete(m);
+        return true;
     }
 
     @Override
@@ -109,7 +120,12 @@ public class DiscordHandler extends ListenerAdapter {
     public void onMessageReceived(MessageReceivedEvent event) {
         Message m = event.getMessage();
         String message = m.getRawContent();
-        ServerHandler.DiscordServer ds = getServerHandler().getById(event.getGuild().getId());
+        DiscordGuild ds = getServerHandler().getById(event.getGuild().getId());
+        if (ds == null)
+            return;
+        if(m.getAuthor().getId().equals(jda.getSelfInfo().getId())){
+            ds.queueForDelete(m);
+        }
         if (message.startsWith("!uhcbot")) {
             m.deleteMessage();
             // hardcode link commands now
@@ -131,57 +147,53 @@ public class DiscordHandler extends ListenerAdapter {
                 event.getGuild().getPublicChannel().sendMessage("The server id is `" + event.getGuild().getId() + "`");
             }
             if (parts[1].equalsIgnoreCase("link")) {
-                if (event.getChannel() != ds.getTextChannel("uhc-link"))
-                    return;
                 String code = parts[2];
                 link(code, event.getAuthor(), (Channel) event.getChannel());
             }
             if (parts[1].equalsIgnoreCase("part")) {
                 Main.logger.info("Leaving server " + event.getGuild().getName());
-                if (ds != null)
-                    ds.destroy();
+                ds.deleteMessages();
+                ds.destroy();
                 servers.removeConnectedServer(event.getGuild().getId());
                 event.getGuild().getPublicChannel().sendMessage("Goodbye.");
                 event.getGuild().getManager().leave();
             }
+            if (parts[1].equalsIgnoreCase("clearMessages")) {
+                ds.deleteMessages();
+                event.getChannel().sendMessage("Deleting messages on server...");
+            }
+            if(parts[1].equalsIgnoreCase("lockChannels")){
+                event.getChannel().sendMessage("Locking all channels on the server");
+                ds.lockChannels();
+            }
+            if(parts[1].equalsIgnoreCase("unlockChannels")){
+                event.getChannel().sendMessage("Unlocking all channels on the server");
+                ds.unlockChannels();
+            }
+            if(parts[1].equalsIgnoreCase("unlockChannel") || parts[1].equalsIgnoreCase("lockChannel")){
+                String channel = "";
+                for(int i = 2; i < parts.length; i++){
+                    channel += parts[i]+" ";
+                }
+                channel = channel.trim();
+                if(parts[1].equalsIgnoreCase("unlockChannel")) {
+                    event.getChannel().sendMessage("Unlocking channel `" + channel + "`");
+                    ds.unlockChannel(channel);
+                } else {
+                    event.getChannel().sendMessage("Locking channel `"+channel+"`");
+                    ds.lockChannel(channel);
+                }
+            }
+            ds.queueForDelete(m);
         }
     }
 
-    /**
-     * Performs the link of the discord name to the uuid
-     *
-     * @param code      The code used in the linking process
-     * @param user      The user to link
-     * @param inChannel The channel this link is occurring in
-     * @return True if the link was successful, fase if it wasn't
-     */
-    public boolean link(String code, User user, Channel inChannel) {
-        PlayerInfo info = Main.uhcNetwork.getPlayerByLinkCode(code);
-        if (info == null) {
-            ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", that code was invalid!");
-            return false;
+    public void shutdown() {
+        for (DiscordGuild s : servers.connectedServers()) {
+            s.destroy();
         }
-        info.setDiscordUser(user.getId());
-        info.setLinked(true);
-        info.setLinkCode("");
-        info.update();
-        ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", you have linked your account to the minecraft name `" + info.getName() + "`");
-        return true;
-    }
-
-    /**
-     * Gets the Discord {@link User} whose account is linked to the given UUID
-     *
-     * @param u The uuid
-     * @return The user
-     */
-    public User getUser(UUID u) {
-        PlayerInfo info = Main.uhcNetwork.getPlayerInfo(u);
-        if (info != null) {
-            return jda.getUserById(info.getDiscordUser());
-        } else {
-            return null;
-        }
+        Main.logger.info("Disconnecting from Discord...");
+        jda.shutdown();
     }
 
     /**
@@ -208,33 +220,5 @@ public class DiscordHandler extends ListenerAdapter {
         Main.logger.info("Linked server " + guild.getName() + "!");
         guild.getPublicChannel().sendMessage("ID retrieval successful! For reference, this guild's id is `" + guild.getId() + "`");
         servers.addConnectedServer(guild);
-        initChannels(servers.getById(guild.getId()));
-    }
-
-    public void shutdown() {
-        for (ServerHandler.DiscordServer s : servers.connectedServers()) {
-            s.destroy();
-        }
-        Main.logger.info("Disconnecting from Discord...");
-        jda.shutdown();
-    }
-
-    /**
-     * Gets the {@link ServerHandler} handler used for this discord handler
-     *
-     * @return A {@link ServerHandler}
-     */
-    public ServerHandler getServerHandler() {
-        return servers;
-    }
-
-    /**
-     * Gets the {@link User} linked to this {@link UUID}
-     *
-     * @param uuid The uuid to check
-     * @return The user
-     */
-    public User getLinkedUser(UUID uuid) {
-        return jda.getUserById(Main.uhcNetwork.getPlayerInfo(uuid).getDiscordUser());
     }
 }
