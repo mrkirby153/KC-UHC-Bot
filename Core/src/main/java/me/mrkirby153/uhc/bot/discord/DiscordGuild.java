@@ -194,8 +194,10 @@ public class DiscordGuild {
     public void destroy() {
         if (Main.logger != null)
             Main.logger.info("Destroying server " + this.name);
-        spectatorRole.getManager().delete();
-        spectatorVoiceChannel.getManager().delete();
+        if (spectatorRole != null)
+            spectatorRole.getManager().delete();
+        if (spectatorVoiceChannel != null)
+            spectatorVoiceChannel.getManager().delete();
         unlockChannels();
         if (teams != null)
             teams.values().forEach(UHCTeam::destroy);
@@ -397,7 +399,7 @@ public class DiscordGuild {
             PermissionOverrideManager mg = permissionOverride.getManager();
             if (permissionOverride.isRoleOverride() && permissionOverride.getRole().equals(guild.getPublicRole()))
                 mg.delete();
-            if(permissionOverride.isUserOverride() && permissionOverride.getUser().equals(jda.getSelfInfo()))
+            if (permissionOverride.isUserOverride() && permissionOverride.getUser().equals(jda.getSelfInfo()))
                 mg.delete();
         }
     }
