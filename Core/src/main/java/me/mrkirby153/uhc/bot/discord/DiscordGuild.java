@@ -378,8 +378,17 @@ public class DiscordGuild {
     public void lockChannel(Channel channel) {
         deny(guild.getPublicRole(), channel.getManager(), Permission.VOICE_CONNECT, Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
         // Allow the UHC bot to still send messages
-        channel.createPermissionOverride(guild.getMember(jda.getSelfUser())).queue(o ->
-                o.getManagerUpdatable().grant(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE).update().queue());
+        boolean updated = false;
+        for (PermissionOverride o : channel.getMemberPermissionOverrides()) {
+            if (o.getMember().equals(guild.getMember(jda.getSelfUser()))) {
+                updated = true;
+                o.getManager().grant(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE).queue();
+                break;
+            }
+        }
+        if (!updated)
+            channel.createPermissionOverride(guild.getMember(jda.getSelfUser())).queue(o ->
+                    o.getManagerUpdatable().grant(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE).update().queue());
     }
 
     /**
@@ -439,10 +448,11 @@ public class DiscordGuild {
         for (PermissionOverride permissionOverride : channel.getPermissionOverrides()) {
             PermOverrideManagerUpdatable mg = permissionOverride.getManagerUpdatable();
             if (permissionOverride.isRoleOverride() && permissionOverride.getRole().equals(guild.getPublicRole())) {
-                mg.clear(mg.getPermissionOverride().getAllowed());
+                mg.getPermissionOverride().delete().queue();
             }
-            if (permissionOverride.isMemberOverride() && permissionOverride.getMember().equals(guild.getMember(jda.getSelfUser())))
-                mg.clear(mg.getPermissionOverride().getAllowed());
+            if (permissionOverride.isMemberOverride() && permissionOverride.getMember().equals(guild.getMember(jda.getSelfUser()))) {
+                mg.getPermissionOverride().delete().queue();
+            }
         }
     }
 

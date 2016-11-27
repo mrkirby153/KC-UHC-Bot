@@ -166,25 +166,25 @@ public class DiscordHandler extends ListenerAdapter {
                 ds.deleteMessages();
                 event.getChannel().sendMessage("Deleting messages on server...").queue();
             }
-            if(parts[1].equalsIgnoreCase("lockChannels")){
+            if(parts[1].equalsIgnoreCase("lockAll")){
                 event.getChannel().sendMessage("Locking all channels on the server").queue();
                 ds.lockChannels();
             }
-            if(parts[1].equalsIgnoreCase("unlockChannels")){
+            if(parts[1].equalsIgnoreCase("unlockAll")){
                 event.getChannel().sendMessage("Unlocking all channels on the server").queue();
                 ds.unlockChannels();
             }
-            if(parts[1].equalsIgnoreCase("toggleDeleteAll")){
+            if(parts[1].equalsIgnoreCase("toggleDelete")){
                 ds.setDeleteAllMessages(!ds.shouldDeleteAllMessages());
                 event.getChannel().sendMessage("Deleting all messages set to `"+ds.shouldDeleteAllMessages()+"`").queue();
             }
-            if(parts[1].equalsIgnoreCase("unlockChannel") || parts[1].equalsIgnoreCase("lockChannel")){
+            if(parts[1].equalsIgnoreCase("unlock") || parts[1].equalsIgnoreCase("lock")){
                 String channel = "";
                 for(int i = 2; i < parts.length; i++){
                     channel += parts[i]+" ";
                 }
                 channel = channel.trim();
-                if(parts[1].equalsIgnoreCase("unlockChannel")) {
+                if(parts[1].equalsIgnoreCase("unlock")) {
                     event.getChannel().sendMessage("Unlocking channel `" + channel + "`").queue();
                     ds.unlockChannel(channel);
                 } else {
