@@ -3,6 +3,7 @@ package me.mrkirby153.uhc.bot.discord;
 import me.mrkirby153.uhc.bot.Main;
 import me.mrkirby153.uhc.bot.network.BotCommandHandlers;
 import net.dv8tion.jda.core.JDA;
+import net.dv8tion.jda.core.MessageHistory;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.*;
 import net.dv8tion.jda.core.exceptions.RateLimitedException;
@@ -142,22 +143,39 @@ public class DiscordGuild {
     public void deleteMessages() {
         Thread clearThread = new Thread(() -> {
             HashMap<MessageChannel, ArrayList<Message>> messages = new HashMap<>();
-            if (messagesToDelete.size() == 0) {
-                messagesToDelete.get(0).deleteMessage();
-            } else {
-                for (Message m : messagesToDelete) {
-                    ArrayList<Message> arr = messages.get(m.getChannel());
-                    if (arr == null)
-                        arr = new ArrayList<>();
-                    arr.add(m);
-                    messages.put(m.getChannel(), arr);
-                }
+            if(messagesToDelete != null) {
+                if (messagesToDelete.size() == 1) {
+                    messagesToDelete.get(0).deleteMessage().queue();
+                } else {
+                    for (Message m : messagesToDelete) {
+                        ArrayList<Message> arr = messages.get(m.getChannel());
+                        if (arr == null)
+                            arr = new ArrayList<>();
+                        arr.add(m);
+                        messages.put(m.getChannel(), arr);
+                    }
 
-                messages.forEach((c, m) -> {
-                    ((TextChannel) c).deleteMessages(m).queue();
-                });
+                    for (Map.Entry<MessageChannel, ArrayList<Message>> e : messages.entrySet()) {
+                        if (e.getValue().size() > 1) {
+                            ((TextChannel) e.getKey()).deleteMessages(e.getValue()).queue();
+                        } else {
+                            e.getValue().get(0).deleteMessage().queue();
+                        }
+                    }
+                }
+                messagesToDelete.clear();
             }
-            messagesToDelete.clear();
+            // Scan the last 100 messages in each channel for UHCBot messages and delete those
+            getAllChannels().stream().filter(c -> c instanceof MessageChannel).map(c -> (MessageChannel) c).forEach(channel ->{
+                MessageHistory history = new MessageHistory(channel);
+                history.retrievePast(100).queue(m -> {
+                    if(m.size() > 1){
+                        ((TextChannel) channel).deleteMessages(m).queue();
+                    } else if(m.size() == 1){
+                        m.get(0).deleteMessage().queue();
+                    }
+                });
+            });
         });
         clearThread.setName("DeleteMessageThread");
         clearThread.start();
