@@ -27,17 +27,22 @@ public class BotCommandManager {
 
     public void handle(String commandType, String serialized) {
         Command cmd = handlerList.get(commandType);
-        if(cmd == null)
+        if (cmd == null)
             return;
         Class<? extends BotCommand> command = cmd.command;
         Class<? extends BotCommandHandler> handler = cmd.handler;
-        try{
+        try {
             BotCommandHandler cmdHandler = handler.newInstance();
             BotCommand deserialized = Utility.deserialize(serialized, command);
-            System.out.println("Handling message "+deserialized.getClass().getCanonicalName());
-            cmdHandler.handleCommand(deserialized);
-            if(!(deserialized instanceof CommandMessageAck)) {
-                System.out.println("Sending acknowledgement of "+deserialized.getClass().getCanonicalName());
+            System.out.println("Handling message " + deserialized.getClass().getCanonicalName());
+            try {
+                cmdHandler.handleCommand(deserialized);
+            } catch (Exception e) {
+                System.err.println("An error occurred when processing the command " + deserialized.getClass().getCanonicalName());
+                e.printStackTrace();
+            }
+            if (!(deserialized instanceof CommandMessageAck)) {
+                System.out.println("Sending acknowledgement of " + deserialized.getClass().getCanonicalName());
                 publish(new CommandMessageAck(deserialized.messageId));
             }
         } catch (InstantiationException | IllegalAccessException e) {
@@ -45,34 +50,14 @@ public class BotCommandManager {
         }
     }
 
-    public void publish(BotCommand command) {
-        try(Jedis j = pool.getResource()){
-            String commandType = command.getClass().getSimpleName();
-            command.messageId = IdGenerator.generateId();
-            String serialized = Utility.serialize(command);
-            String channel = CommandListener.SERVER_COMMAND_CHANNEL+":"+commandType;
-            j.publish(channel, serialized);
-        }
-    }
-
-    public void publishBlocking(BotCommand command){
-        publish(command);
-        waitingCommands.put(command.messageId, command);
-    }
-
-    public void register(Class<? extends BotCommand> command, Class<? extends BotCommandHandler> handler) {
-        System.out.println("Registering "+command.getCanonicalName()+" with listener "+handler.getCanonicalName());
-        this.handlerList.put(command.getSimpleName(), new Command(command, handler));
-    }
-
-    public void init(RedisConnection connection){
+    public void init(RedisConnection connection) {
         pool = Utility.createPool(connection);
-        Thread thread = new Thread("Redis Listener"){
+        Thread thread = new Thread("Redis Listener") {
             @Override
             public void run() {
                 Jedis jedis = pool.getResource();
-                String s = CommandListener.SERVER_COMMAND_CHANNEL +":*";
-                System.out.println("Started listening on "+s);
+                String s = CommandListener.SERVER_COMMAND_CHANNEL + ":*";
+                System.out.println("Started listening on " + s);
                 jedis.psubscribe(new CommandListener(), s);
             }
         };
@@ -81,15 +66,24 @@ public class BotCommandManager {
         BotCommandManager.instance().register(CommandMessageAck.class, MessageAckHandler.class);
     }
 
-
-    private class Command {
-        private final Class<? extends BotCommand> command;
-        private final Class<? extends BotCommandHandler> handler;
-
-        public Command(Class<? extends BotCommand> command, Class<? extends BotCommandHandler> handler) {
-            this.command = command;
-            this.handler = handler;
+    public void publish(BotCommand command) {
+        try (Jedis j = pool.getResource()) {
+            String commandType = command.getClass().getSimpleName();
+            command.messageId = IdGenerator.generateId();
+            String serialized = Utility.serialize(command);
+            String channel = CommandListener.SERVER_COMMAND_CHANNEL + ":" + commandType;
+            j.publish(channel, serialized);
         }
+    }
+
+    public void publishBlocking(BotCommand command) {
+        publish(command);
+        waitingCommands.put(command.messageId, command);
+    }
+
+    public void register(Class<? extends BotCommand> command, Class<? extends BotCommandHandler> handler) {
+        System.out.println("Registering " + command.getCanonicalName() + " with listener " + handler.getCanonicalName());
+        this.handlerList.put(command.getSimpleName(), new Command(command, handler));
     }
 
     private static class IdGenerator {
@@ -98,12 +92,12 @@ public class BotCommandManager {
 
         private static int inc = 1;
 
-        public static String generateId(){
+        public static String generateId() {
             long timeMs = System.currentTimeMillis();
             long newTime = timeMs * (long) Math.pow(2, 12);
             long procId = (long) Math.pow(2, 8);
-            if(lastMs == timeMs){
-                if(inc < 255)
+            if (lastMs == timeMs) {
+                if (inc < 255)
                     inc++;
                 else
                     return null;
@@ -113,16 +107,26 @@ public class BotCommandManager {
         }
     }
 
-    public static class MessageAckHandler implements BotCommandHandler{
+    public static class MessageAckHandler implements BotCommandHandler {
 
         @Override
         public void handleCommand(BotCommand command) {
-            if(command instanceof CommandMessageAck){
+            if (command instanceof CommandMessageAck) {
                 String id = ((CommandMessageAck) command).getMessageAcked();
                 BotCommand waiting = BotCommandManager.instance().waitingCommands.get(id);
-                if(waiting != null)
+                if (waiting != null)
                     waiting.waiting = false;
             }
+        }
+    }
+
+    private class Command {
+        private final Class<? extends BotCommand> command;
+        private final Class<? extends BotCommandHandler> handler;
+
+        public Command(Class<? extends BotCommand> command, Class<? extends BotCommandHandler> handler) {
+            this.command = command;
+            this.handler = handler;
         }
     }
 }
