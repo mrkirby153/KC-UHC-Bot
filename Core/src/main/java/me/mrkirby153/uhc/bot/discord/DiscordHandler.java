@@ -121,12 +121,6 @@ public class DiscordHandler extends ListenerAdapter {
     public void onMessageReceived(MessageReceivedEvent event) {
         Message m = event.getMessage();
         String message = m.getRawContent();
-        DiscordGuild ds = getServerHandler().getById(event.getGuild().getId());
-        if(ds.shouldDeleteAllMessages())
-            ds.queueForDelete(m);
-        if(m.getAuthor().getId().equals(jda.getSelfUser().getId())){
-            ds.queueForDelete(m);
-        }
         if (message.startsWith("!uhcbot")) {
             m.deleteMessage().queue();
             // hardcode link commands now
@@ -137,8 +131,14 @@ public class DiscordHandler extends ListenerAdapter {
                 DiscordGuild guild = linkGuild(event.getGuild());
                 guild.create();
             }
+            DiscordGuild ds = getServerHandler().getById(event.getGuild().getId());
             if(ds == null)
                 return;
+            if(ds.shouldDeleteAllMessages())
+                ds.queueForDelete(m);
+            if(m.getAuthor().getId().equals(jda.getSelfUser().getId())){
+                ds.queueForDelete(m);
+            }
             if (parts[1].equalsIgnoreCase("linked")) {
                 PlayerInfo playerInfo = Main.uhcNetwork.getPlayerInfo(event.getAuthor().getId());
                 if (playerInfo != null) {
