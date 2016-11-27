@@ -3,8 +3,8 @@ package me.mrkirby153.uhc.bot.discord;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import me.mrkirby153.uhc.bot.Main;
-import net.dv8tion.jda.JDA;
-import net.dv8tion.jda.entities.Guild;
+import net.dv8tion.jda.core.JDA;
+import net.dv8tion.jda.core.entities.Guild;
 
 import java.io.File;
 import java.io.FileOutputStream;

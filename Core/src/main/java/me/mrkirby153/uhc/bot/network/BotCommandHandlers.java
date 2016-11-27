@@ -10,9 +10,11 @@ import me.mrkirby153.uhc.bot.network.comm.commands.ServerCommand;
 import me.mrkirby153.uhc.bot.network.comm.commands.team.BotCommandAssignTeams;
 import me.mrkirby153.uhc.bot.network.comm.commands.team.BotCommandNewTeam;
 import me.mrkirby153.uhc.bot.network.comm.commands.team.BotCommandRemoveTeam;
-import net.dv8tion.jda.entities.Role;
-import net.dv8tion.jda.entities.User;
-import net.dv8tion.jda.entities.VoiceChannel;
+import net.dv8tion.jda.core.entities.Member;
+import net.dv8tion.jda.core.entities.Role;
+import net.dv8tion.jda.core.entities.User;
+import net.dv8tion.jda.core.entities.VoiceChannel;
+
 
 public class BotCommandHandlers {
 
@@ -59,34 +61,37 @@ public class BotCommandHandlers {
 
     public static class AssignTeams implements BotCommandHandler {
 
+        public static boolean connectedToVice(DiscordGuild server, Member user) {
+            for (VoiceChannel c : server.getGuild().getVoiceChannels()) {
+                if (c.getMembers() != null)
+                    for (Member u : c.getMembers()) {
+                        if (u.getUser().getId().equalsIgnoreCase(user.getUser().getId()))
+                            return true;
+                    }
+            }
+            return false;
+        }
+
         @Override
         public void handleCommand(BotCommand command) {
             if (command instanceof BotCommandAssignTeams) {
                 DiscordGuild server = getServer(((BotCommandAssignTeams) command).getServerId());
                 ((BotCommandAssignTeams) command).getTeams().forEach((u, team) -> {
                     User user = Main.discordHandler.getUser(u);
-                    if (user == null)
+                    if(user == null)
                         return;
-                    server.getTeam(team).assignUser(user);
-                    if (connectedToVice(server, user)) {
+                    Member member = server.getGuild().getMember(user);
+                    if (member == null)
+                        return;
+                    server.getTeam(team).assignUser(member);
+                    if (connectedToVice(server, member)) {
                         VoiceChannel channel = (VoiceChannel) server.getChannel("Team " + team, DiscordGuild.ChannelType.VOICE);
                         if (channel != null) {
-                            server.getGuild().getManager().moveVoiceUser(user, channel);
+                            server.getGuild().getController().moveVoiceMember(member, channel).queue();
                         }
                     }
                 });
             }
-        }
-
-        public static boolean connectedToVice(DiscordGuild server, User user) {
-            for (VoiceChannel c : server.getGuild().getVoiceChannels()) {
-                if (c.getUsers() != null)
-                    for (User u : c.getUsers()) {
-                        if (u.getId().equalsIgnoreCase(user.getId()))
-                            return true;
-                    }
-            }
-            return false;
         }
     }
 
@@ -104,12 +109,11 @@ public class BotCommandHandlers {
         @Override
         public void handleCommand(BotCommand command) {
             if (command instanceof BotCommandAssignSpectator) {
-                User u = Main.discordHandler.getLinkedUser(((BotCommandAssignSpectator) command).getUser());
+                DiscordGuild server = getServer(((BotCommandAssignSpectator) command).getServerId());
+                Member u = server.getGuild().getMember(Main.discordHandler.getLinkedUser(((BotCommandAssignSpectator) command).getUser()));
                 if (u != null) {
-                    DiscordGuild server = getServer(((BotCommandAssignSpectator) command).getServerId());
                     Role spectatorRole = server.getSpectatorRole();
-                    server.getGuild().getManager().addRoleToUser(u, spectatorRole);
-                    server.getGuild().getManager().update();
+                    server.getGuild().getController().addRolesToMember(u, spectatorRole).queue();
                 }
             }
         }

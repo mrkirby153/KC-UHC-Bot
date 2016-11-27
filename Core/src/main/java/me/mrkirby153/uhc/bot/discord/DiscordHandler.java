@@ -2,12 +2,15 @@ package me.mrkirby153.uhc.bot.discord;
 
 import me.mrkirby153.uhc.bot.Main;
 import me.mrkirby153.uhc.bot.network.PlayerInfo;
-import net.dv8tion.jda.JDA;
-import net.dv8tion.jda.JDABuilder;
-import net.dv8tion.jda.entities.*;
-import net.dv8tion.jda.events.guild.GuildJoinEvent;
-import net.dv8tion.jda.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.hooks.ListenerAdapter;
+import net.dv8tion.jda.core.AccountType;
+import net.dv8tion.jda.core.JDA;
+import net.dv8tion.jda.core.JDABuilder;
+import net.dv8tion.jda.core.entities.*;
+import net.dv8tion.jda.core.events.guild.GuildJoinEvent;
+import net.dv8tion.jda.core.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.core.exceptions.RateLimitedException;
+import net.dv8tion.jda.core.hooks.ListenerAdapter;
+import net.dv8tion.jda.core.requests.RestAction;
 
 import javax.security.auth.login.LoginException;
 import java.io.File;
@@ -72,8 +75,8 @@ public class DiscordHandler extends ListenerAdapter {
      */
     public void init() {
         try {
-            jda = new JDABuilder().setBotToken(this.token).addListener(this).buildBlocking();
-        } catch (LoginException | InterruptedException e) {
+            jda = new JDABuilder(AccountType.BOT).setToken(this.token).addListener(this).buildBlocking();
+        } catch (LoginException | InterruptedException | RateLimitedException e) {
             e.printStackTrace();
         }
         servers = new ServerHandler(this.jda, new File(workingDir, "servers.json"));
@@ -99,10 +102,8 @@ public class DiscordHandler extends ListenerAdapter {
         info.setLinked(true);
         info.setLinkCode("");
         info.update();
-        Message m = ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", you have linked your account to the minecraft name `" + info.getName() + "`");
-        DiscordGuild dg = getServerHandler().getById(((TextChannel) m.getChannel()).getGuild().getId());
-        if (dg != null)
-            dg.queueForDelete(m);
+        RestAction<Message> m = ((MessageChannel) inChannel).sendMessage(user.getAsMention() + ", you have linked your account to the minecraft name `" + info.getName() + "`");
+        m.queue();
         return true;
     }
 
@@ -123,11 +124,11 @@ public class DiscordHandler extends ListenerAdapter {
         DiscordGuild ds = getServerHandler().getById(event.getGuild().getId());
         if(ds.shouldDeleteAllMessages())
             ds.queueForDelete(m);
-        if(m.getAuthor().getId().equals(jda.getSelfInfo().getId())){
+        if(m.getAuthor().getId().equals(jda.getSelfUser().getId())){
             ds.queueForDelete(m);
         }
         if (message.startsWith("!uhcbot")) {
-            m.deleteMessage();
+            m.deleteMessage().queue();
             // hardcode link commands now
             String[] parts = message.split(" ");
             if (parts.length == 0)
@@ -141,13 +142,13 @@ public class DiscordHandler extends ListenerAdapter {
             if (parts[1].equalsIgnoreCase("linked")) {
                 PlayerInfo playerInfo = Main.uhcNetwork.getPlayerInfo(event.getAuthor().getId());
                 if (playerInfo != null) {
-                    event.getChannel().sendMessage(event.getAuthor().getAsMention() + ", you " + ((playerInfo.isLinked()) ? "have " : "**haven't** ") + "linked your discord account!");
+                    event.getChannel().sendMessage(event.getAuthor().getAsMention() + ", you " + ((playerInfo.isLinked()) ? "have " : "**haven't** ") + "linked your discord account!").queue();
                 } else {
-                    event.getChannel().sendMessage(event.getAuthor().getAsMention() + ", you **haven't** linked your discord account!");
+                    event.getChannel().sendMessage(event.getAuthor().getAsMention() + ", you **haven't** linked your discord account!").queue();
                 }
             }
             if (parts[1].equalsIgnoreCase("id")) {
-                event.getGuild().getPublicChannel().sendMessage("The server id is `" + event.getGuild().getId() + "`");
+                event.getGuild().getPublicChannel().sendMessage("The server id is `" + event.getGuild().getId() + "`").queue();
             }
             if (parts[1].equalsIgnoreCase("link")) {
                 String code = parts[2];
@@ -158,24 +159,24 @@ public class DiscordHandler extends ListenerAdapter {
                 ds.deleteMessages();
                 ds.destroy();
                 servers.removeConnectedServer(event.getGuild().getId());
-                event.getGuild().getPublicChannel().sendMessage("Goodbye.");
-                event.getGuild().getManager().leave();
+                event.getGuild().getPublicChannel().sendMessage("Goodbye.").queue();
+                event.getGuild().leave().queue();
             }
             if (parts[1].equalsIgnoreCase("clearMessages")) {
                 ds.deleteMessages();
-                event.getChannel().sendMessage("Deleting messages on server...");
+                event.getChannel().sendMessage("Deleting messages on server...").queue();
             }
             if(parts[1].equalsIgnoreCase("lockChannels")){
-                event.getChannel().sendMessage("Locking all channels on the server");
+                event.getChannel().sendMessage("Locking all channels on the server").queue();
                 ds.lockChannels();
             }
             if(parts[1].equalsIgnoreCase("unlockChannels")){
-                event.getChannel().sendMessage("Unlocking all channels on the server");
+                event.getChannel().sendMessage("Unlocking all channels on the server").queue();
                 ds.unlockChannels();
             }
             if(parts[1].equalsIgnoreCase("toggleDeleteAll")){
                 ds.setDeleteAllMessages(!ds.shouldDeleteAllMessages());
-                event.getChannel().sendMessage("Deleting all messages set to `"+ds.shouldDeleteAllMessages()+"`");
+                event.getChannel().sendMessage("Deleting all messages set to `"+ds.shouldDeleteAllMessages()+"`").queue();
             }
             if(parts[1].equalsIgnoreCase("unlockChannel") || parts[1].equalsIgnoreCase("lockChannel")){
                 String channel = "";
@@ -184,10 +185,10 @@ public class DiscordHandler extends ListenerAdapter {
                 }
                 channel = channel.trim();
                 if(parts[1].equalsIgnoreCase("unlockChannel")) {
-                    event.getChannel().sendMessage("Unlocking channel `" + channel + "`");
+                    event.getChannel().sendMessage("Unlocking channel `" + channel + "`").queue();
                     ds.unlockChannel(channel);
                 } else {
-                    event.getChannel().sendMessage("Locking channel `"+channel+"`");
+                    event.getChannel().sendMessage("Locking channel `"+channel+"`").queue();
                     ds.lockChannel(channel);
                 }
             }
@@ -225,7 +226,7 @@ public class DiscordHandler extends ListenerAdapter {
      */
     private DiscordGuild linkGuild(Guild guild) {
         Main.logger.info("Linked server " + guild.getName() + "!");
-        guild.getPublicChannel().sendMessage("ID retrieval successful! For reference, this guild's id is `" + guild.getId() + "`");
+        guild.getPublicChannel().sendMessage("ID retrieval successful! For reference, this guild's id is `" + guild.getId() + "`").queue();
         return servers.addConnectedServer(guild);
     }
 }

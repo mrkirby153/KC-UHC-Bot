@@ -1,10 +1,12 @@
 package me.mrkirby153.uhc.bot.discord;
 
+
 import me.mrkirby153.uhc.bot.Main;
-import net.dv8tion.jda.Permission;
-import net.dv8tion.jda.entities.User;
-import net.dv8tion.jda.managers.ChannelManager;
-import net.dv8tion.jda.managers.RoleManager;
+import net.dv8tion.jda.core.Permission;
+import net.dv8tion.jda.core.entities.Channel;
+import net.dv8tion.jda.core.entities.Member;
+import net.dv8tion.jda.core.entities.Role;
+import net.dv8tion.jda.core.exceptions.RateLimitedException;
 
 import java.util.HashSet;
 
@@ -26,18 +28,19 @@ public class UHCTeam {
     /**
      * The text channel assigned to this team
      */
-    private ChannelManager textChannel;
+    private Channel textChannel;
     /**
      * The voice channel assigned to this team
      */
-    private ChannelManager voiceChannel;
+    private Channel voiceChannel;
 
     /**
      * The team role on the discord server
      */
-    private RoleManager teamRole;
+    private Role teamRole;
 
-    private HashSet<User> assignedUsers = new HashSet<>();
+    private HashSet<Member> assignedUsers = new HashSet<>();
+
 
     public UHCTeam(DiscordGuild guild, String name) {
         this.name = name;
@@ -47,13 +50,13 @@ public class UHCTeam {
     /**
      * Assigns the user this team's role
      *
-     * @param user The user to assign
+     * @param member The user to assign
      */
-    public void assignUser(User user) {
-        if (user == null)
+    public void assignUser(Member member) {
+        if (member == null)
             return;
-        this.guild.getGuild().getManager().addRoleToUser(user, teamRole.getRole()).update();
-        this.assignedUsers.add(user);
+        this.guild.getGuild().getController().addRolesToMember(member, teamRole).queue();
+        this.assignedUsers.add(member);
     }
 
     /**
@@ -68,9 +71,9 @@ public class UHCTeam {
      * Destroys the team on the server
      */
     public void destroy() {
-        teamRole.delete();
-        textChannel.delete();
-        voiceChannel.delete();
+        teamRole.delete().queue();
+        textChannel.delete().queue();
+        voiceChannel.delete().queue();
     }
 
     /**
@@ -78,16 +81,9 @@ public class UHCTeam {
      *
      * @param user The user to remove
      */
-    public void unassign(User user) {
+    public void unassign(Member user) {
         this.assignedUsers.remove(user);
-        this.guild.getGuild().getManager().removeRoleFromUser(user, teamRole.getRole()).update();
-    }
-
-    /**
-     * Removes this role from all the assigned
-     */
-    public void unassignAll() {
-        this.assignedUsers.forEach(this::unassign);
+        this.guild.getGuild().getController().removeRolesFromMember(user, teamRole).queue();
     }
 
     /**
@@ -96,24 +92,33 @@ public class UHCTeam {
     private void createChannels() {
         Main.logger.info("Creating team " + this.name);
 
-        textChannel = this.guild.getOrCreateChannel("team-" + this.name.toLowerCase().replaceAll("\\s", "-"), DiscordGuild.ChannelType.TEXT).getManager();
-        voiceChannel = this.guild.getOrCreateChannel("Team " + this.name, DiscordGuild.ChannelType.VOICE).getManager();
+        textChannel = this.guild.getOrCreateChannel("team-" + this.name.toLowerCase().replaceAll("\\s", "-"), DiscordGuild.ChannelType.TEXT);
+        voiceChannel = this.guild.getOrCreateChannel("Team " + this.name, DiscordGuild.ChannelType.VOICE);
 
         // Assign permissions
-        guild.denyDefault(textChannel, Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
-        guild.denyDefault(voiceChannel, Permission.VOICE_CONNECT, Permission.VOICE_SPEAK);
+        guild.denyDefault(textChannel.getManager(), Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
+        guild.denyDefault(voiceChannel.getManager(), Permission.VOICE_CONNECT, Permission.VOICE_SPEAK);
 
-        guild.grant(this.teamRole.getRole(), textChannel, Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
-        guild.grant(this.teamRole.getRole(), voiceChannel, Permission.VOICE_CONNECT, Permission.VOICE_SPEAK);
+        guild.grant(this.teamRole, textChannel.getManager(), Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
+        guild.grant(this.teamRole, voiceChannel.getManager(), Permission.VOICE_CONNECT, Permission.VOICE_SPEAK);
     }
 
     /**
      * Creates the roles on the server
      */
     private void createRole() {
-        teamRole = this.guild.getGuild().createRole();
-        teamRole.setName(this.name);
-        teamRole.update();
+        while(teamRole == null){
+            try {
+                teamRole = this.guild.getGuild().getController().createRole().block();
+            } catch (RateLimitedException e) {
+                try {
+                    Thread.sleep(e.getRetryAfter());
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
+            }
+        }
+        teamRole.getManager().setName(this.name).queue();
     }
 
 

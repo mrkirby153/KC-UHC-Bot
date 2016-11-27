@@ -2,12 +2,12 @@ package me.mrkirby153.uhc.bot.discord;
 
 import me.mrkirby153.uhc.bot.Main;
 import me.mrkirby153.uhc.bot.network.BotCommandHandlers;
-import net.dv8tion.jda.JDA;
-import net.dv8tion.jda.Permission;
-import net.dv8tion.jda.entities.*;
-import net.dv8tion.jda.managers.ChannelManager;
-import net.dv8tion.jda.managers.PermissionOverrideManager;
-import net.dv8tion.jda.managers.RoleManager;
+import net.dv8tion.jda.core.JDA;
+import net.dv8tion.jda.core.Permission;
+import net.dv8tion.jda.core.entities.*;
+import net.dv8tion.jda.core.exceptions.RateLimitedException;
+import net.dv8tion.jda.core.managers.ChannelManager;
+import net.dv8tion.jda.core.managers.PermOverrideManagerUpdatable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -92,7 +92,7 @@ public class DiscordGuild {
      */
     public void bringAllToLobby() {
         VoiceChannel vc = (VoiceChannel) getOrCreateChannel("Lobby", ChannelType.VOICE);
-        getGuild().getUsers().stream().filter(user -> BotCommandHandlers.AssignTeams.connectedToVice(this, user)).forEach(user -> getGuild().getManager().moveVoiceUser(user, vc));
+        getGuild().getMembers().stream().filter(member -> BotCommandHandlers.AssignTeams.connectedToVice(this, member)).forEach(member -> getGuild().getController().moveVoiceMember(member, vc).queue());
     }
 
     /**
@@ -103,14 +103,12 @@ public class DiscordGuild {
         if (guild == null) {
             guild = jda.getGuildById(this.id);
         }
-        RoleManager spectatorRm = guild.createRole();
-        spectatorRm.setName("Spectators");
-        spectatorRm.update();
-        this.spectatorRole = spectatorRm.getRole();
-
-        this.spectatorVoiceChannel = (VoiceChannel) getOrCreateChannel("Spectators", ChannelType.VOICE);
-        this.denyDefault(spectatorVoiceChannel.getManager(), Permission.VOICE_CONNECT);
-        this.grant(spectatorRole, spectatorVoiceChannel.getManager(), Permission.VOICE_CONNECT);
+        guild.getController().createRole().queue(role -> role.getManager().setName("Spectators").queue((Void) -> {
+            this.spectatorRole = role;
+            this.spectatorVoiceChannel = (VoiceChannel) getOrCreateChannel("Spectators", ChannelType.VOICE);
+            this.denyDefault(spectatorVoiceChannel.getManager(), Permission.VOICE_CONNECT);
+            this.grant(spectatorRole, spectatorVoiceChannel.getManager(), Permission.VOICE_CONNECT);
+        }));
     }
 
     /**
@@ -133,7 +131,7 @@ public class DiscordGuild {
     public void deleteChannel(String s) {
         for (Channel c : getAllChannels()) {
             if (c.getName().equalsIgnoreCase(s)) {
-                c.getManager().delete();
+                c.delete().queue();
             }
         }
     }
@@ -156,12 +154,7 @@ public class DiscordGuild {
                 }
 
                 messages.forEach((c, m) -> {
-                    ((TextChannel) c).deleteMessages(m);
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                    ((TextChannel) c).deleteMessages(m).queue();
                 });
             }
             messagesToDelete.clear();
@@ -178,9 +171,16 @@ public class DiscordGuild {
      * @param permissions The permissions to deny
      */
     public void deny(Role role, ChannelManager channel, Permission... permissions) {
-        PermissionOverrideManager permissionManager = channel.getChannel().createPermissionOverride(role);
-        permissionManager.deny(permissions);
-        permissionManager.update();
+        boolean updated = false;
+        for (PermissionOverride o : channel.getChannel().getRolePermissionOverrides()) {
+            if (o.getRole().equals(role)) {
+                updated = true;
+                o.getManager().deny(permissions).queue();
+                break;
+            }
+        }
+        if (!updated)
+            channel.getChannel().createPermissionOverride(role).queue(p -> p.getManager().deny(permissions).queue());
     }
 
     /**
@@ -200,9 +200,9 @@ public class DiscordGuild {
         if (Main.logger != null)
             Main.logger.info("Destroying server " + this.name);
         if (spectatorRole != null)
-            spectatorRole.getManager().delete();
+            spectatorRole.delete().queue();
         if (spectatorVoiceChannel != null)
-            spectatorVoiceChannel.getManager().delete();
+            spectatorVoiceChannel.delete().queue();
         unlockChannels();
         if (teams != null)
             teams.values().forEach(UHCTeam::destroy);
@@ -260,14 +260,6 @@ public class DiscordGuild {
         return name;
     }
 
-    public boolean shouldDeleteAllMessages() {
-        return deleteAllMessages;
-    }
-
-    public void setDeleteAllMessages(boolean deleteAllMessages) {
-        this.deleteAllMessages = deleteAllMessages;
-    }
-
     public void setName(String name) {
         this.name = name;
     }
@@ -301,9 +293,33 @@ public class DiscordGuild {
             return foundChannel;
         switch (channelType) {
             case VOICE:
-                return guild.createVoiceChannel(name).getChannel();
+                Channel channel = null;
+                while (channel == null) {
+                    try {
+                        channel = guild.getController().createVoiceChannel(name).block();
+                    } catch (RateLimitedException e) {
+                        try {
+                            Thread.sleep(e.getRetryAfter());
+                        } catch (InterruptedException e1) {
+                            e1.printStackTrace();
+                        }
+                    }
+                }
+                return channel;
             case TEXT:
-                return guild.createTextChannel(name).getChannel();
+                channel = null;
+                while (channel == null) {
+                    try {
+                        channel = guild.getController().createTextChannel(name).block();
+                    } catch (RateLimitedException e) {
+                        try {
+                            Thread.sleep(e.getRetryAfter());
+                        } catch (InterruptedException e1) {
+                            e1.printStackTrace();
+                        }
+                    }
+                }
+                return channel;
         }
         return null;
     }
@@ -335,9 +351,14 @@ public class DiscordGuild {
      * @param permissions The permissions to grant
      */
     public void grant(Role role, ChannelManager channel, Permission... permissions) {
-        PermissionOverrideManager permissionManager = channel.getChannel().createPermissionOverride(role);
-        permissionManager.grant(permissions);
-        permissionManager.update();
+        boolean updated = false;
+        for (PermissionOverride o : channel.getChannel().getRolePermissionOverrides()) {
+            if (o.getRole().equals(role)) {
+                updated = true;
+                o.getManager().grant(permissions).queue();
+            }
+        }
+        channel.getChannel().createPermissionOverride(role).queue(p -> p.getManagerUpdatable().grant(permissions).update().queue());
     }
 
     /**
@@ -357,9 +378,8 @@ public class DiscordGuild {
     public void lockChannel(Channel channel) {
         deny(guild.getPublicRole(), channel.getManager(), Permission.VOICE_CONNECT, Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
         // Allow the UHC bot to still send messages
-        PermissionOverrideManager self = channel.createPermissionOverride(jda.getSelfInfo());
-        self.grant(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE);
-        self.update();
+        channel.createPermissionOverride(guild.getMember(jda.getSelfUser())).queue(o ->
+                o.getManagerUpdatable().grant(Permission.MESSAGE_READ, Permission.MESSAGE_WRITE).update().queue());
     }
 
     /**
@@ -389,6 +409,14 @@ public class DiscordGuild {
         this.teams.remove(name.toLowerCase()).destroy();
     }
 
+    public void setDeleteAllMessages(boolean deleteAllMessages) {
+        this.deleteAllMessages = deleteAllMessages;
+    }
+
+    public boolean shouldDeleteAllMessages() {
+        return deleteAllMessages;
+    }
+
     /**
      * Unlocks a channel by its name
      *
@@ -409,11 +437,12 @@ public class DiscordGuild {
      */
     public void unlockChannel(Channel channel) {
         for (PermissionOverride permissionOverride : channel.getPermissionOverrides()) {
-            PermissionOverrideManager mg = permissionOverride.getManager();
-            if (permissionOverride.isRoleOverride() && permissionOverride.getRole().equals(guild.getPublicRole()))
-                mg.delete();
-            if (permissionOverride.isUserOverride() && permissionOverride.getUser().equals(jda.getSelfInfo()))
-                mg.delete();
+            PermOverrideManagerUpdatable mg = permissionOverride.getManagerUpdatable();
+            if (permissionOverride.isRoleOverride() && permissionOverride.getRole().equals(guild.getPublicRole())) {
+                mg.clear(mg.getPermissionOverride().getAllowed());
+            }
+            if (permissionOverride.isMemberOverride() && permissionOverride.getMember().equals(guild.getMember(jda.getSelfUser())))
+                mg.clear(mg.getPermissionOverride().getAllowed());
         }
     }
 
