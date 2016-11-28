@@ -376,7 +376,8 @@ public class DiscordGuild {
                 o.getManager().grant(permissions).queue();
             }
         }
-        channel.getChannel().createPermissionOverride(role).queue(p -> p.getManagerUpdatable().grant(permissions).update().queue());
+        if(!updated)
+            channel.getChannel().createPermissionOverride(role).queue(p -> p.getManagerUpdatable().grant(permissions).update().queue());
     }
 
     /**
