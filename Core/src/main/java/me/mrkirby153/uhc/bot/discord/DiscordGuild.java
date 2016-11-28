@@ -143,7 +143,7 @@ public class DiscordGuild {
     public void deleteMessages() {
         Thread clearThread = new Thread(() -> {
             HashMap<MessageChannel, ArrayList<Message>> messages = new HashMap<>();
-            if(messagesToDelete != null) {
+            if (messagesToDelete != null) {
                 if (messagesToDelete.size() == 1) {
                     messagesToDelete.get(0).deleteMessage().queue();
                 } else {
@@ -166,15 +166,18 @@ public class DiscordGuild {
                 messagesToDelete.clear();
             }
             // Scan the last 100 messages in each channel for UHCBot messages and delete those
-            getAllChannels().stream().filter(c -> c instanceof MessageChannel).map(c -> (MessageChannel) c).forEach(channel ->{
+            getAllChannels().stream().filter(c -> c instanceof MessageChannel).map(c -> (MessageChannel) c).forEach(channel -> {
                 MessageHistory history = new MessageHistory(channel);
+                List<Message> toDelete = new ArrayList<>();
                 history.retrievePast(100).queue(m -> {
-                    if(m.size() > 1){
-                        ((TextChannel) channel).deleteMessages(m).queue();
-                    } else if(m.size() == 1){
-                        m.get(0).deleteMessage().queue();
+                    m.stream().filter(m1 -> m1.getAuthor().getId().equals(jda.getSelfUser().getId())).forEach(toDelete::add);
+                    if (toDelete.size() > 1) {
+                        ((TextChannel) channel).deleteMessages(toDelete).queue();
+                    } else if (toDelete.size() == 1) {
+                        toDelete.get(0).deleteMessage().queue();
                     }
                 });
+
             });
         });
         clearThread.setName("DeleteMessageThread");
@@ -376,7 +379,7 @@ public class DiscordGuild {
                 o.getManager().grant(permissions).queue();
             }
         }
-        if(!updated)
+        if (!updated)
             channel.getChannel().createPermissionOverride(role).queue(p -> p.getManagerUpdatable().grant(permissions).update().queue());
     }
 
