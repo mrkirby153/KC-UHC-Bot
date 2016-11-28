@@ -111,9 +111,8 @@ public class DiscordHandler extends ListenerAdapter {
     public void onGuildJoin(GuildJoinEvent event) {
         Guild guild = event.getGuild();
         guild.getPublicChannel().sendMessage("Greetings! I am KC UHC Bot and I will be facilitating the movement of users around your discord server. In order to function" +
-                " properly, I need the following permissions: ` Manage Roles, Manage Channels, Kick Members, Create Instant Invite, Read Messages, Send Messages, Manage Messages, " +
-                "Connect to voice, and Use Voice Activity`");
-        guild.getPublicChannel().sendMessage("Please verify that I have these permissions.");
+                " properly, I need the following permissions: ` Manage Roles, Manage Channels, Read Messages, Send Messages, Manage Messages, and Move Members`").queue();
+        guild.getPublicChannel().sendMessage("Please verify that I have these permissions.").queue();
         linkGuild(guild);
     }
 
