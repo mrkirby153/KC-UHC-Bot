@@ -140,7 +140,7 @@ public class DiscordGuild {
     /**
      * Deletes all the messages created by the robot
      */
-    public void deleteMessages() {
+    public void deleteMessages(boolean block) {
         Thread clearThread = new Thread(() -> {
             HashMap<MessageChannel, ArrayList<Message>> messages = new HashMap<>();
             if (messagesToDelete != null) {
@@ -182,6 +182,16 @@ public class DiscordGuild {
         });
         clearThread.setName("DeleteMessageThread");
         clearThread.start();
+        if(block)
+            try {
+                clearThread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+    }
+
+    public void deleteMessages(){
+        this.deleteMessages(false);
     }
 
     /**

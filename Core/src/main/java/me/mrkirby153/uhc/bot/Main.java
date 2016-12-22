@@ -60,6 +60,7 @@ public class Main {
             if (line.equalsIgnoreCase("shutdown")) {
                 Main.logger.info("Shutdown initiated...");
                 uhcNetwork.getDatastore().getElements().forEach(e -> uhcNetwork.getDatastore().removeElement(e));
+                Main.discordHandler.getServerHandler().connectedServers().forEach(g-> g.deleteMessages(true));
                 Main.discordHandler.shutdown();
                 Main.logger.info("Waiting for final API calls");
                 Thread.sleep(2000);
